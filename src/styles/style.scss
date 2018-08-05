@@ -1,0 +1,23 @@
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+section {
+  padding: 0 3rem;
+  margin: 4rem 0;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+#canvas {
+  border: 1px solid black;
+}

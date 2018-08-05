@@ -1,0 +1,27 @@
+{
+  "name": "p2p-infinite-openworld",
+  "private": true,
+  "scripts": {
+    "test": "node __tests__",
+    "lint": "eslint src",
+    "dev": "NODE_ENV=development webpack-dev-server",
+    "build": "NODE_ENV=production webpack",
+    "deploy": "gh-pages -d ./dist",
+    "build-deploy": "npm run build && npm run deploy"
+  },
+  "dependencies": {
+    "dexie": "^2.0.4",
+    "seedrandom": "^2.4.3",
+    "three": "^0.95.0"
+  },
+  "devDependencies": {
+    "babel-eslint": "^8.2.6",
+    "benchmark": "^2.1.4",
+    "eslint": "^5.2.0",
+    "eslint-config-airbnb": "^17.0.0",
+    "eslint-plugin-import": "^2.13.0",
+    "eslint-plugin-jsx-a11y": "^6.1.1",
+    "eslint-plugin-react": "^7.10.0",
+    "webpack-boiler": "latest"
+  }
+}
