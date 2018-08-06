@@ -7,6 +7,7 @@
     "node": true
   },
   "rules": {
+    "no-multi-assign": 0,
     "default-case": 0,
     "no-unused-prop-types": 0,
     "react/jsx-no-bind": [1, {

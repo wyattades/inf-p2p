@@ -2,22 +2,39 @@
 html, body {
   margin: 0;
   padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 html {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-section {
-  padding: 0 3rem;
-  margin: 4rem 0;
+// section {
+//   padding: 0 3rem;
+//   margin: 4rem 0;
+// }
+
+// .container {
+//   max-width: 900px;
+//   margin: 0 auto;
+// }
+
+#game {
+  display: block;
 }
 
-.container {
-  max-width: 900px;
-  margin: 0 auto;
-}
-
-#canvas {
-  border: 1px solid black;
+#info {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  p {
+    color: white;
+    font-weight: bold;
+    font-family: monospace;
+    margin: 0;
+    font-size: 1.5em;
+    line-height: 120%;
+  }
 }

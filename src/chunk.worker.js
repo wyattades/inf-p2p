@@ -5,6 +5,7 @@ import MapCache from './MapCache';
 /* eslint-disable no-restricted-globals */
 
 const CHUNK_SIZE = 64;
+const MEGA_CHUNK = 4;
 
 const mapCache = new MapCache('world1');
 
@@ -13,6 +14,9 @@ const genTerrain = (x, z) => {
   // Generate for the first time
   const seed = `${x},${z}`;
   const rnd = new Seedrandom(seed);
+
+  // const bigSeed = `${MEGA_CHUNK * x}${MEGA_CHUNK * z}`;
+  // const bigRnd = new Seedrandom(bigSeed);
 
   return TERRAIN_TEMPLATE.map(rnd.int32);
 };

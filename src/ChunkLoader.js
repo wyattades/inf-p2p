@@ -1,52 +1,56 @@
 import ChunkWorker from './chunk.worker';
+import Chunk from './Chunk';
 
 const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 
-const CHUNK_SIZE = 64;
-
-class Chunk {
-
-  constructor(x, z) {
-    this.x = x;
-    this.z = z;
-    this.terrain = null;
-  }
-
-}
-
 export default class ChunkLoader {
 
-  constructor(player, renderDist = 1) {
-    this.renderDist = Math.max(1, renderDist);
-    this.player = player;
+  constructor(scene, spawnPos, renderDist = 1) {
+    this.scene = scene;
+    this.spawnPos = spawnPos;
+    this.renderDist = Math.max(1, renderDist) | 0;
     this.chunks = {};
     this.chunkCount = 0;
     this.loadedCount = 0;
     this.playerChunk = null;
+    this.ready = false;
     
     this.worker = new ChunkWorker();
 
     this.worker.onmessage = ({ data }) => {
       switch (data.cmd) {
-        case 'terrain': this.receiveLoadChunk(data.x, data.z, data.terrain);
+        case 'terrain': this._receiveLoadChunk(data.x, data.z, data.terrain);
       }
     };
-        
-    const px = Math.floor(player.x / CHUNK_SIZE);
-    const pz = Math.floor(player.z / CHUNK_SIZE);
-
-    for (let i = 0; i < renderDist * 2 + 1; i++) {
-      for (let j = 0; j < renderDist * 2 + 1; j++) {
-        const chunk = this.requestLoadChunk(
-          px + i - renderDist,
-          pz + j - renderDist,
-        );
-        if (i === renderDist && j === renderDist) this.playerChunk = chunk;
-      }
-    }
   }
 
-  requestLoadChunk(x, z) {
+  loadInitial() {
+    return new Promise((resolve) => {
+      const px = Math.floor(this.spawnPos.x / Chunk.SIZE);
+      const pz = Math.floor(this.spawnPos.z / Chunk.SIZE);
+  
+      for (let i = 0; i < this.renderDist * 2 + 1; i++) {
+        for (let j = 0; j < this.renderDist * 2 + 1; j++) {
+          const chunk = this._requestLoadChunk(
+            px + i - this.renderDist,
+            pz + j - this.renderDist,
+          );
+          if (i === this.renderDist && j === this.renderDist) this.playerChunk = chunk;
+        }
+      }
+
+      // What a hack...
+      const intervalId = window.setInterval(() => {
+        if (this.loadedCount >= (this.renderDist * 2 + 1) * (this.renderDist * 2 + 1)) {
+          this.ready = true;
+          window.clearInterval(intervalId);
+          resolve();
+        }
+      }, 200);
+    });
+  }
+
+  _requestLoadChunk(x, z) {
     const chunk = new Chunk(x, z);
     this.chunks[`${x},${z}`] = chunk;
     this.chunkCount++;
@@ -54,10 +58,11 @@ export default class ChunkLoader {
     return chunk;
   }
 
-  receiveLoadChunk(x, z, terrain) {
+  _receiveLoadChunk(x, z, terrain) {
     const chunk = this.chunks[`${x},${z}`];
     if (chunk) { // Chunks have the possibility of unloading before load is finished
-      chunk.terrain = terrain;
+      chunk.setTerrain(terrain);
+      this.scene.add(chunk.mesh);
       this.loadedCount++;
     }
   }
@@ -72,14 +77,14 @@ export default class ChunkLoader {
       for (let i = -this.renderDist; i <= this.renderDist; i++) {
         const newX = this.playerChunk.x + (deltaX > 0 ? this.renderDist : -this.renderDist) + deltaX;
         const newZ = this.playerChunk.z + i;
-        if (!(`${newX},${newZ}` in this.chunks)) this.requestLoadChunk(newX, newZ);
+        if (!(`${newX},${newZ}` in this.chunks)) this._requestLoadChunk(newX, newZ);
       }
     }
     if (deltaZ) {
       for (let i = -this.renderDist; i <= this.renderDist; i++) {
         const newX = this.playerChunk.x + i;
         const newZ = this.playerChunk.z + (deltaZ > 0 ? this.renderDist : -this.renderDist) + deltaZ;
-        if (!(`${newX},${newZ}` in this.chunks)) this.requestLoadChunk(newX, newZ);
+        if (!(`${newX},${newZ}` in this.chunks)) this._requestLoadChunk(newX, newZ);
       }
     }
 
@@ -87,13 +92,13 @@ export default class ChunkLoader {
     if (deltaX && deltaZ) {
       const newX = this.playerChunk.x + (deltaX > 0 ? this.renderDist : -this.renderDist) + deltaX;
       const newZ = this.playerChunk.z + (deltaZ > 0 ? this.renderDist : -this.renderDist) + deltaZ;
-      if (!(`${newX},${newZ}` in this.chunks)) this.requestLoadChunk(newX, newZ);
+      if (!(`${newX},${newZ}` in this.chunks)) this._requestLoadChunk(newX, newZ);
     }
 
     // Set new playerChunk
     this.playerChunk = this.chunks[`${x},${z}`];
     if (!this.playerChunk) {
-      this.requestLoadChunk(x, z);
+      this._requestLoadChunk(x, z);
       console.log('Invalid playerChunk', x, z);
     }
 
@@ -103,7 +108,11 @@ export default class ChunkLoader {
     for (const [dx, dz] of DIRS) {
       for (let i = 0; i < this.renderDist * 4; i++, _x += dx, _z += dz) {
         const key = `${_x},${_z}`;
-        if (key in this.chunks) delete this.chunks[key];
+        const chunk = this.chunks[key];
+        if (chunk) {
+          this.scene.remove(chunk.mesh);
+          delete this.chunks[key];
+        }
       }
     }
   }
