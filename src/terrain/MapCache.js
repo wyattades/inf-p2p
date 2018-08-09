@@ -1,8 +1,11 @@
 import Dexie from 'dexie';
 
+
+const disabled = !!process.env.DEV;
+
 export default class MapCache {
 
-  constructor(name, version = 1) {
+  constructor(name, version = 2) {
     this.name = name;
     this.version = version;
 
@@ -14,11 +17,15 @@ export default class MapCache {
   }
 
   saveChunk(x, z, terrain) {
+    if (disabled) return Promise.resolve();
+
     return this.chunks
     .put({ x, z, terrain, modified: Date.now() });
   }
 
   loadChunk(x, z) {
+    if (disabled) return Promise.resolve();
+
     return this.chunks
     .where({ x, z })
     .toArray()

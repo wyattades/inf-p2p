@@ -8,7 +8,7 @@ html, body {
 }
 
 html {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: monospace;
 }
 
 // section {
@@ -21,6 +21,14 @@ html {
 //   margin: 0 auto;
 // }
 
+p {
+  color: white;
+  font-weight: bold;
+  margin: 0;
+  font-size: 1.5em;
+  line-height: 120%;
+}
+
 #game {
   display: block;
 }
@@ -29,12 +37,37 @@ html {
   position: fixed;
   top: 10px;
   left: 10px;
+}
+
+#loader {
+  position: fixed;
+  z-index: 100;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: black;
   p {
     color: white;
-    font-weight: bold;
-    font-family: monospace;
-    margin: 0;
-    font-size: 1.5em;
-    line-height: 120%;
+    display: block;
+    &:after {
+      display: inline-block;
+      width: 0;
+      overflow-x: visible;
+      animation: dotty steps(1,end) 1s infinite;
+      content: '';
+    }
   }
+}
+
+@keyframes dotty {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75%  { content: '...'; }
+    100% { content: ''; }
 }

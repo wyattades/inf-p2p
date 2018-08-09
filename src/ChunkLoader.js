@@ -1,5 +1,6 @@
-import ChunkWorker from './chunk.worker';
+import TerrainWorker from './terrain/terrain.worker';
 import Chunk from './Chunk';
+
 
 const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 
@@ -15,11 +16,11 @@ export default class ChunkLoader {
     this.playerChunk = null;
     this.ready = false;
     
-    this.worker = new ChunkWorker();
+    this.worker = new TerrainWorker();
 
     this.worker.onmessage = ({ data }) => {
       switch (data.cmd) {
-        case 'terrain': this._receiveLoadChunk(data.x, data.z, data.terrain);
+        case 'terrain': this._receiveLoadChunk(data.x, data.z, data.attributes);
       }
     };
   }
@@ -58,10 +59,10 @@ export default class ChunkLoader {
     return chunk;
   }
 
-  _receiveLoadChunk(x, z, terrain) {
+  _receiveLoadChunk(x, z, attr) {
     const chunk = this.chunks[`${x},${z}`];
     if (chunk) { // Chunks have the possibility of unloading before load is finished
-      chunk.setTerrain(terrain);
+      chunk.setTerrain(attr);
       this.scene.add(chunk.mesh);
       this.loadedCount++;
     }
@@ -73,6 +74,7 @@ export default class ChunkLoader {
     const deltaX = x - this.playerChunk.x,
           deltaZ = z - this.playerChunk.z;
 
+    // Edges
     if (deltaX) {
       for (let i = -this.renderDist; i <= this.renderDist; i++) {
         const newX = this.playerChunk.x + (deltaX > 0 ? this.renderDist : -this.renderDist) + deltaX;
@@ -98,7 +100,7 @@ export default class ChunkLoader {
     // Set new playerChunk
     this.playerChunk = this.chunks[`${x},${z}`];
     if (!this.playerChunk) {
-      this._requestLoadChunk(x, z);
+      this.playerChunk = this._requestLoadChunk(x, z);
       console.log('Invalid playerChunk', x, z);
     }
 

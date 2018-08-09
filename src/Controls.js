@@ -24,7 +24,6 @@ export default class Controls {
     this.velocity = new THREE.Vector3(0, 0, 0);
     this.onGround = false;
     this.keystate = {};
-    this.bindEvents();
   }
 
   bindEvents() {
@@ -62,11 +61,11 @@ export default class Controls {
   }
 
   update(delta) {
-    const speed = delta * 2.2;
+    const speed = delta * 2.0;
     const rotSpeed = delta * 1.2;
-    const drag = 0.94; // TODO: Use slope
-    const gravity = delta * 2.5; // This doesn't work cause it's not linear... TODO
-    const jumpSpeed = 1.0;
+    const drag = 0.92; // TODO: Use slope
+    const gravity = 0.04; // This doesn't work cause it's not linear... TODO
+    const jumpSpeed = 0.7;
 
     const motion = new THREE.Vector3(0, 0, 0);
     if (this.keystate[K_FORWARD]) {
@@ -125,7 +124,7 @@ export default class Controls {
     // this.position.y = nextPosition.y;
     // this.position.set(nextPosition);
 
-    const playerHeight = 5;
+    const playerHeight = 3;
     const groundHeight = this.app.chunkLoader.playerChunk.getHeightAt(this.position.x, this.position.z);
     const groundDist = this.position.y - playerHeight - groundHeight;
     this.onGround = groundDist <= 0;
