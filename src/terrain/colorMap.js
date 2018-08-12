@@ -10,7 +10,7 @@ const COLOR_HEIGHTS = [
   { d: 0.6, c: 0x3f6a15 },
   { d: 0.7, c: 0x5d443e },
   { d: 0.9, c: 0x4d3b3a },
-  { d: 1.0, c: 0xfffeff },
+  { d: 100.0, c: 0xfffeff },
 ];
 const getColorFromHeight = (h) => {
   for (const { d, c } of COLOR_HEIGHTS) {

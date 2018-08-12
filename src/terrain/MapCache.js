@@ -5,7 +5,7 @@ const disabled = !!process.env.DEV;
 
 export default class MapCache {
 
-  constructor(name, version = 2) {
+  constructor(name, version = 1) {
     this.name = name;
     this.version = version;
 
@@ -26,6 +26,7 @@ export default class MapCache {
   loadChunk(x, z) {
     if (disabled) return Promise.resolve();
 
+    // TODO: is this most efficient way to fetch single item?
     return this.chunks
     .where({ x, z })
     .toArray()

@@ -57,7 +57,7 @@ export default class Chunk {
     // return y || 0.0;
   }
 
-  static ROTATE_PLAIN = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
+  // static ROTATE_PLAIN = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
 
   setTerrain(attr) {
 

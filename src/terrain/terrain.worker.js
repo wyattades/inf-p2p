@@ -1,5 +1,7 @@
 /* eslint-disable no-restricted-globals */
-import { PlaneGeometry, BufferGeometry } from 'three';
+
+import { PlaneGeometry } from 'three/src/geometries/PlaneGeometry';
+import { BufferGeometry } from 'three/src/core/BufferGeometry';
 
 import MapCache from './MapCache';
 import terrainGenerator from './terrainGenerator';
@@ -25,7 +27,9 @@ const loadChunk = ({ x, z }) => {
 
     const colors = colorMap(terrain);
 
-    for (let i = 0; i < terrain.length; i++) terrain[i] = Math.max(0.4, terrain[i]) * AMPLITUDE;
+    for (let i = 0; i < terrain.length; i++)
+      // terrain[i] *= AMPLITUDE;
+      terrain[i] = Math.max(0.4, terrain[i]) * AMPLITUDE;
 
     const geom = new PlaneGeometry(
       CHUNK_SEGMENTS * SEGMENT_SIZE,

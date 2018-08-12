@@ -55,7 +55,10 @@ export default class ChunkLoader {
     const chunk = new Chunk(x, z);
     this.chunks[`${x},${z}`] = chunk;
     this.chunkCount++;
-    this.worker.postMessage({ cmd: 'loadChunk', x: chunk.x, z: chunk.z });
+
+    const lod = 1; // (this.playerChunk.x - x)this.renderDist
+
+    this.worker.postMessage({ cmd: 'loadChunk', x: chunk.x, z: chunk.z, lod });
     return chunk;
   }
 
@@ -105,10 +108,11 @@ export default class ChunkLoader {
     }
 
     // Unload chunks
-    let _x = x - this.renderDist * 2,
-        _z = z - this.renderDist * 2;
+    const unloadDist = Math.max(this.renderDist + 2, this.renderDist * 2);
+    let _x = x - unloadDist,
+        _z = z - unloadDist;
     for (const [dx, dz] of DIRS) {
-      for (let i = 0; i < this.renderDist * 4; i++, _x += dx, _z += dz) {
+      for (let i = 0; i < unloadDist * 2; i++, _x += dx, _z += dz) {
         const key = `${_x},${_z}`;
         const chunk = this.chunks[key];
         if (chunk) {
