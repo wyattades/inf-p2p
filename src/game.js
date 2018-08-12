@@ -70,14 +70,15 @@ class App {
     this.render();
   }
 
-  // eslint-disable-next-line class-methods-use-this
   update(delta) {
-    // Dispatch update event for listeners
-    window.dispatchEvent(new CustomEvent('app-update', {
-      detail: {
-        delta,
-      },
-    }));
+    this.controls.update(delta);
+
+    const chunkX = Math.floor(this.controls.position.x / Chunk.SIZE);
+    const chunkZ = Math.floor(this.controls.position.z / Chunk.SIZE);
+    if (chunkX !== this.chunkLoader.playerChunk.x || chunkZ !== this.chunkLoader.playerChunk.z) {
+      this.chunkLoader.updatePlayerChunk(chunkX, chunkZ);
+      ui.set('chunk', `${this.chunkLoader.playerChunk.x},${this.chunkLoader.playerChunk.z}`);
+    }
   }
 
   render() {
@@ -92,14 +93,10 @@ class App {
 export const init = () => {
   const app = new App();
 
+  // Let there be light
   const ambientLight = new THREE.AmbientLight(0x000000);
-  // ambientLight.castShadow = true;
   app.scene.add(ambientLight);
 
-  // const hemispherLight = new THREE.HemisphereLight(0xffffbb, 0x080820, 1);
-  // app.scene.add(hemispherLight);
-
-  // Let there be light
   const light = new THREE.DirectionalLight(0xffffff, 0.8);
   light.position.set(1, 1, 0).normalize();
   app.scene.add(light);
@@ -110,10 +107,11 @@ export const init = () => {
 
 
   // Fog
-  // const fog = new THREE.FogExp2(0x8cb8ff, 0.005);
-  // app.scene.fog = fog;
-  // app.renderer.setClearColor(fog.color, 1);
+  const fog = new THREE.FogExp2(0x8cb8ff, 0.0009);
+  app.scene.fog = fog;
+  app.renderer.setClearColor(fog.color, 1);
 
+  // TODO: save somewhere
   const spawn = {
     x: 50000,
     z: -600,
@@ -121,7 +119,7 @@ export const init = () => {
 
   // first person controls
   const controls = new Controls(app);
-  controls.position.set(spawn.x, 2.0, spawn.z);
+  controls.position.set(spawn.x, 200.0, spawn.z);
 
   const renderDist = 1;
   const chunkLoader = new ChunkLoader(app.scene, spawn, renderDist);
@@ -136,18 +134,8 @@ export const init = () => {
 
     ui.set('chunk', `${chunkLoader.playerChunk.x},${chunkLoader.playerChunk.z}`);
 
-    window.addEventListener('app-update', (e) => {
-      controls.update(e.detail.delta);
-
-      const chunkX = Math.floor(controls.position.x / Chunk.SIZE);
-      const chunkZ = Math.floor(controls.position.z / Chunk.SIZE);
-      if (chunkX !== chunkLoader.playerChunk.x || chunkZ !== chunkLoader.playerChunk.z) {
-        chunkLoader.updatePlayerChunk(chunkX, chunkZ);
-        ui.set('chunk', `${chunkLoader.playerChunk.x},${chunkLoader.playerChunk.z}`);
-      }
-    });
-
     app.chunkLoader = chunkLoader;
+    app.controls = controls;
 
     app.start();
     controls.bindEvents();
