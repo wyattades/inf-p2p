@@ -7,7 +7,8 @@
     "dev": "NODE_ENV=development webpack-dev-server",
     "build": "NODE_ENV=production webpack",
     "deploy": "gh-pages -d ./dist",
-    "build-deploy": "npm run build && npm run deploy"
+    "build-deploy": "npm run build && npm run deploy",
+    "postinstall": "node utils/treeShakeThreeJs.js"
   },
   "dependencies": {
     "dexie": "^2.0.4",

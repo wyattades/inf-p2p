@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import MainLoop from 'mainloop.js';
 
 import ChunkLoader from './ChunkLoader';
 import Chunk from './Chunk';
@@ -49,28 +50,40 @@ class App {
 
   // Start the main loop
   start() {
-    this.loop();
+    // this.loop();
+
+    MainLoop.setUpdate(this.update).setDraw(this.render).setEnd(this.updateEnd).start();
 
     setInterval(() => {
-      ui.set('FPS', 1 / this.frameTime);
+      ui.set('FPS', MainLoop.getFPS()); // 1 / this.frameTime
     }, 1000);
+
   }
 
-  frameTime = 0;
+  // frameTime = 0;
 
-  loop() {
-    requestAnimationFrame(() => this.loop());
+  // loop() {
+  //   requestAnimationFrame(() => this.loop());
 
-    const time = performance.now() / 1000;
-    const delta = time - (this.lastUpdate || 0);
-    this.frameTime += (delta - this.frameTime) / 20;
+  //   const time = performance.now() / 1000;
+  //   const delta = time - (this.lastUpdate || 0);
+  //   this.frameTime += (delta - this.frameTime) / 20;
 
-    this.update(delta);
-    this.lastUpdate = time;
-    this.render();
+  //   this.update(delta);
+  //   this.lastUpdate = time;
+  //   this.render();
+  // }
+
+  updateEnd = (fps, panic) => {
+    ui.set('FPS', fps);
+
+    if (panic) {
+      const x = MainLoop.resetFrameDelta();
+      console.warn('Skipped frames:', x);
+    }
   }
 
-  update(delta) {
+  update = (delta) => {
     this.controls.update(delta);
 
     const chunkX = Math.floor(this.controls.position.x / Chunk.SIZE);
@@ -81,7 +94,7 @@ class App {
     }
   }
 
-  render() {
+  render = () => {
     const scene = this.scene;
     const camera = this.camera;
     const renderer = this.renderer;

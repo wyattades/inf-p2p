@@ -61,7 +61,8 @@ export default class Controls {
   }
 
   update(delta) {
-    const speed = delta * 2.0;
+    delta = 1 / delta;
+    const speed = delta * 1.2;
     const rotSpeed = delta * 1.2;
     const drag = 0.92; // TODO: Use slope
     const gravity = 0.04; // This doesn't work cause it's not linear... TODO
