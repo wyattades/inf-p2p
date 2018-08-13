@@ -5,17 +5,21 @@ import ChunkLoader from './ChunkLoader';
 import Chunk from './Chunk';
 import Controls from './Controls';
 import * as ui from './ui';
+import * as options from './options';
+import * as save from './save';
 
 // TODO: this file is kind of a mess
 
 class App {
 
   constructor() {
-    // Grab window properties
+    
+    // Get window properties
     const width = window.innerWidth;
     const height = window.innerHeight;
     const pixelRatio = window.devicePixelRatio;
     const aspect = width / height;
+
     // Setup three.js
     this.camera = new THREE.PerspectiveCamera(45, aspect, 0.5, 1500);
     this.scene = new THREE.Scene();
@@ -28,12 +32,12 @@ class App {
     };
 
     this.renderer = new THREE.WebGLRenderer({
-      antialias: false,
+      antialias: options.get('antialias'),
       canvas,
     });
+    this.renderer.shadowMap.enabled = options.get('shadows');
     this.renderer.setPixelRatio(pixelRatio);
     this.renderer.setSize(width, height);
-    // document.body.appendChild(this.renderer.domElement);
 
     // Catch resize events
     window.onresize = () => {
@@ -50,14 +54,7 @@ class App {
 
   // Start the main loop
   start() {
-    // this.loop();
-
     MainLoop.setUpdate(this.update).setDraw(this.render).setEnd(this.updateEnd).start();
-
-    setInterval(() => {
-      ui.set('FPS', MainLoop.getFPS()); // 1 / this.frameTime
-    }, 1000);
-
   }
 
   // frameTime = 0;
@@ -90,15 +87,14 @@ class App {
     const chunkZ = Math.floor(this.controls.position.z / Chunk.SIZE);
     if (chunkX !== this.chunkLoader.playerChunk.x || chunkZ !== this.chunkLoader.playerChunk.z) {
       this.chunkLoader.updatePlayerChunk(chunkX, chunkZ);
-      ui.set('chunk', `${this.chunkLoader.playerChunk.x},${this.chunkLoader.playerChunk.z}`);
+      
+      ui.set('chunkX', this.chunkLoader.playerChunk.x);
+      ui.set('chunkZ', this.chunkLoader.playerChunk.z);
     }
   }
 
   render = () => {
-    const scene = this.scene;
-    const camera = this.camera;
-    const renderer = this.renderer;
-    renderer.render(scene, camera);
+    this.renderer.render(this.scene, this.camera);
   }
 }
 
@@ -107,16 +103,17 @@ export const init = () => {
   const app = new App();
 
   // Let there be light
-  const ambientLight = new THREE.AmbientLight(0x000000);
+  const ambientLight = new THREE.AmbientLight(0xfff9b2, 0.1);
   app.scene.add(ambientLight);
 
   const light = new THREE.DirectionalLight(0xffffff, 0.8);
-  light.position.set(1, 1, 0).normalize();
+  light.position.set(0.5, 1, 0).normalize();
+  light.castShadow = options.get('shadows');
   app.scene.add(light);
 
-  const light2 = new THREE.DirectionalLight(0xffcccc, 0.2);
-  light2.position.set(-1, 1, 1).normalize();
-  app.scene.add(light2);
+  // const light2 = new THREE.DirectionalLight(0xffcccc, 0.2);
+  // light2.position.set(-1, 1, 1).normalize();
+  // app.scene.add(light2);
 
 
   // Fog
@@ -124,19 +121,12 @@ export const init = () => {
   app.scene.fog = fog;
   app.renderer.setClearColor(fog.color, 1);
 
-  // TODO: save somewhere
-  const spawn = {
-    x: 50000,
-    z: -600,
-  };
-
   // first person controls
   const controls = new Controls(app);
-  controls.position.set(spawn.x, 200.0, spawn.z);
+  save.init(controls.position);
 
-  const renderDist = 1;
-  const chunkLoader = new ChunkLoader(app.scene, spawn, renderDist);
-  chunkLoader.loadInitial().then(() => {
+  const chunkLoader = new ChunkLoader(app.scene, options.get('renderDist'));
+  chunkLoader.loadInitial(controls.position.x, controls.position.z).then(() => {
 
     document.getElementById('loader').remove();
 
@@ -145,7 +135,8 @@ export const init = () => {
       chunkLoader.clearCache();
     });
 
-    ui.set('chunk', `${chunkLoader.playerChunk.x},${chunkLoader.playerChunk.z}`);
+    ui.set('chunkX', chunkLoader.playerChunk.x);
+    ui.set('chunkZ', chunkLoader.playerChunk.z);
 
     app.chunkLoader = chunkLoader;
     app.controls = controls;

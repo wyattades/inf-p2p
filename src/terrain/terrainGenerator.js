@@ -2,16 +2,17 @@ import Seedrandom from 'seedrandom';
 import SimplexNoise from 'simplex-noise';
 
 import { CHUNK_SEGMENTS } from '../constants';
+// import bezier from './bezier';
 
 
-const MAGIC_MAX_HEIGHT_SCALE = 0.58;
+const MAGIC_MAX_HEIGHT_SCALE = 1.16;
 
-const genTerrain2 = ({
+const genNoiseMap = ({
   seed,
   scale = 50.0,
-  octaves = 5,
+  octaves = 8,
   persistance = 0.5,
-  lacunarity = 3.0,
+  lacunarity = 2.0,
   offset = { x: 0.0, y: 0.0 },
 }) => {
 
@@ -61,17 +62,35 @@ const genTerrain2 = ({
         frequency *= lacunarity;
       }
 
-      noiseMap[x * mapWidth + y] = (noiseHeight + 1.0) / (2.0 * maxHeight * MAGIC_MAX_HEIGHT_SCALE);
+      noiseMap[x * mapWidth + y] = Math.max(0.0, (noiseHeight + 1.0) / (maxHeight * MAGIC_MAX_HEIGHT_SCALE));
     }
   }
 
   return noiseMap;
 };
 
-export default (x, z) => genTerrain2({
+export const generateNoiseMap = (chunkX, chunkZ) => genNoiseMap({
   seed: 'a-19sdfu428',
   offset: {
-    x: z * (CHUNK_SEGMENTS - 1),
-    y: -x * (CHUNK_SEGMENTS - 1),
+    x: chunkZ * (CHUNK_SEGMENTS - 1),
+    y: -chunkX * (CHUNK_SEGMENTS - 1),
   },
 });
+
+const heightCurve = (t) => {
+  return t;
+  // if (t < 0.4) return 0;
+  // if (t < 0.5) return 4 * t * t * t;
+  // return 1 / (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+  // u0 * ((1 - t) ** 3) + 3 * u1 * ((1 - t) ** 2) * t + 3 * u2 * (1 - t) * (t ** 2) + u3 * (t ** 3)
+};
+
+const AMPLITUDE = 60.0;
+export const generateHeightMap = (noiseMap) => {
+
+  for (let i = 0; i < noiseMap.length; i++) {
+    noiseMap[i] = heightCurve(noiseMap[i]) * AMPLITUDE;
+  }
+
+  return noiseMap;
+};

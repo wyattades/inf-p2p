@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CHUNK_SEGMENTS, SEGMENT_SIZE } from './constants';
+import * as options from './options';
 
 
 const groundMaterial = new THREE.MeshLambertMaterial({
@@ -20,12 +21,16 @@ export default class Chunk {
   }
 
   getHeightAt(x, z) {
+    if (!this.mesh)
+      return 0;
+
     // Slower than the below method, but it actually works...
     groundRayCaster.ray.origin.x = x;
     groundRayCaster.ray.origin.z = z;
     const inter = groundRayCaster.intersectObject(this.mesh);
     if (inter && inter.length)
       return inter[0].point.y;
+      
     return 0;
 
     // x -= this.x * Chunk.SIZE;
@@ -57,8 +62,6 @@ export default class Chunk {
     // return y || 0.0;
   }
 
-  // static ROTATE_PLAIN = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
-
   setTerrain(attr) {
 
     const geometry = new THREE.BufferGeometry();
@@ -69,6 +72,7 @@ export default class Chunk {
 
     this.mesh = new THREE.Mesh(geometry, groundMaterial.clone());
     this.mesh.position.set((this.x + 0.5) * Chunk.SIZE, 0, (this.z + 0.5) * Chunk.SIZE);
+    this.mesh.castShadow = this.mesh.receiveShadow = options.get('shadows');
   }
 
 }

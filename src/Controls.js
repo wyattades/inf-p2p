@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
 import * as ui from './ui';
+import { clamp } from './utils';
 
 
 // Key constants
@@ -61,12 +62,14 @@ export default class Controls {
   }
 
   update(delta) {
+    // Do we even need delta if it's constant?
     delta = 1 / delta;
-    const speed = delta * 1.2;
+    const speed = delta * 1.1;
     const rotSpeed = delta * 1.2;
-    const drag = 0.92; // TODO: Use slope
-    const gravity = 0.04; // This doesn't work cause it's not linear... TODO
-    const jumpSpeed = 0.7;
+    const drag = 0.91; // TODO: Use slope
+    const gravity = 0.03; // This doesn't work cause it's not linear... TODO
+    const jumpSpeed = 0.6;
+    const maxSpeed = 0.7;
 
     const motion = new THREE.Vector3(0, 0, 0);
     if (this.keystate[K_FORWARD]) {
@@ -104,12 +107,6 @@ export default class Controls {
     // nextPosition.add(this.velocity);
     this.position.add(this.velocity);
 
-    // drag
-    this.velocity.x *= drag;
-    this.velocity.z *= drag;
-    // gravity
-    this.velocity.y -= gravity;
-
     // let x = nextPosition.x;
     // let z = nextPosition.z;
     // const terrain = this.app.terrain;
@@ -131,6 +128,19 @@ export default class Controls {
     this.onGround = groundDist <= 0;
     if (this.onGround) this.velocity.y = 0;
     if (groundDist < 0) this.position.y = groundHeight + playerHeight;
+    
+    const velY = this.velocity.y;
+    this.velocity.y = 0;
+
+    // drag
+    if (groundDist < 0.5) {
+      this.velocity.multiplyScalar(drag);
+    }
+    this.velocity.clampLength(-maxSpeed, maxSpeed);
+    this.velocity.y = velY;
+
+    // gravity
+    this.velocity.y -= gravity;
 
     // TEMP?
     ui.set('x', this.position.x);

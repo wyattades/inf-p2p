@@ -6,10 +6,9 @@ const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 
 export default class ChunkLoader {
 
-  constructor(scene, spawnPos, renderDist = 1) {
+  constructor(scene, renderDist) {
     this.scene = scene;
-    this.spawnPos = spawnPos;
-    this.renderDist = Math.max(1, renderDist) | 0;
+    this.renderDist = Math.max(1, renderDist | 0);
     this.chunks = {};
     this.chunkCount = 0;
     this.loadedCount = 0;
@@ -25,10 +24,10 @@ export default class ChunkLoader {
     };
   }
 
-  loadInitial() {
+  loadInitial(playerX, playerZ) {
     return new Promise((resolve) => {
-      const px = Math.floor(this.spawnPos.x / Chunk.SIZE);
-      const pz = Math.floor(this.spawnPos.z / Chunk.SIZE);
+      const px = Math.floor(playerX / Chunk.SIZE);
+      const pz = Math.floor(playerZ / Chunk.SIZE);
   
       for (let i = 0; i < this.renderDist * 2 + 1; i++) {
         for (let j = 0; j < this.renderDist * 2 + 1; j++) {

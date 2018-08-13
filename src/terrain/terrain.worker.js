@@ -4,9 +4,9 @@ import { PlaneGeometry } from 'three/src/geometries/PlaneGeometry';
 import { BufferGeometry } from 'three/src/core/BufferGeometry';
 
 import MapCache from './MapCache';
-import terrainGenerator from './terrainGenerator';
+import { generateHeightMap, generateNoiseMap } from './terrainGenerator';
 import colorMap from './colorMap';
-import { AMPLITUDE, SEGMENT_SIZE, CHUNK_SEGMENTS } from '../constants';
+import { SEGMENT_SIZE, CHUNK_SEGMENTS } from '../constants';
 
 
 const mapCache = new MapCache('world1');
@@ -18,7 +18,7 @@ const loadChunk = ({ x, z }) => {
 
     if (cachedChunk && cachedChunk.terrain) return cachedChunk.terrain;
     else {
-      const terrain = terrainGenerator(x, z);
+      const terrain = generateNoiseMap(x, z);
       return mapCache.saveChunk(x, z, terrain)
       .then(() => terrain);
     }
@@ -27,10 +27,9 @@ const loadChunk = ({ x, z }) => {
 
     const colors = colorMap(terrain);
 
-    for (let i = 0; i < terrain.length; i++)
-      // terrain[i] *= AMPLITUDE;
-      terrain[i] = Math.max(0.4, terrain[i]) * AMPLITUDE;
+    terrain = generateHeightMap(terrain);
 
+    // TODO: use BufferPlaneGeometry
     const geom = new PlaneGeometry(
       CHUNK_SEGMENTS * SEGMENT_SIZE,
       CHUNK_SEGMENTS * SEGMENT_SIZE,
@@ -46,6 +45,9 @@ const loadChunk = ({ x, z }) => {
     for (let i = 0; i < colors.length; i++) {
       geom.faces[i].color.setHex(colors[i]);
     }
+
+    // geom.computeFaceNormals();
+    geom.computeVertexNormals();
 
     const bufferGeom = new BufferGeometry().fromGeometry(geom);
 
