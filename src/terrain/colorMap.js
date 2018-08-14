@@ -3,14 +3,14 @@ import { CHUNK_SEGMENTS } from '../constants';
 
 
 const COLOR_HEIGHTS = [
-  { d: 0.3, c: 0x3363c2 },
-  { d: 0.4, c: 0x3766c7 },
-  { d: 0.45, c: 0xd0d180 },
-  { d: 0.55, c: 0x579718 },
-  { d: 0.6, c: 0x3f6a15 },
-  { d: 0.7, c: 0x5d443e },
-  { d: 0.9, c: 0x4d3b3a },
-  { d: 100.0, c: 0xfffeff },
+  { d: 0.3, c: 0x3363c2 }, // water deep
+  { d: 0.35, c: 0x3766c7 }, // water shallow
+  { d: 0.4, c: 0xd0d180 }, // sand
+  { d: 0.55, c: 0x579718 }, // grass light
+  { d: 0.6, c: 0x3f6a15 }, // grass dark
+  { d: 0.7, c: 0x5d443e }, // dirt light
+  { d: 0.9, c: 0x4d3b3a }, // dirt dark
+  { d: 100.0, c: 0xfffeff }, // snow
 ];
 const getColorFromHeight = (h) => {
   for (const { d, c } of COLOR_HEIGHTS) {

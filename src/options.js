@@ -1,11 +1,12 @@
 
 // Defaults
 const opt = {
-  renderDist: 1,
+  renderDist: 2,
   quality: 1.0,
   shadows: true,
   mouseSensitivity: 1.0,
   antialias: false,
+  fog: true,
 };
 
 const load = () => {

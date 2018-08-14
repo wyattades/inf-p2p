@@ -1,15 +1,15 @@
 import Seedrandom from 'seedrandom';
 import SimplexNoise from 'simplex-noise';
+import Bezier from 'bezier-easing';
 
 import { CHUNK_SEGMENTS } from '../constants';
-// import bezier from './bezier';
 
 
 const MAGIC_MAX_HEIGHT_SCALE = 1.16;
 
 const genNoiseMap = ({
   seed,
-  scale = 50.0,
+  scale = 100.0,
   octaves = 8,
   persistance = 0.5,
   lacunarity = 2.0,
@@ -77,15 +77,9 @@ export const generateNoiseMap = (chunkX, chunkZ) => genNoiseMap({
   },
 });
 
-const heightCurve = (t) => {
-  return t;
-  // if (t < 0.4) return 0;
-  // if (t < 0.5) return 4 * t * t * t;
-  // return 1 / (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
-  // u0 * ((1 - t) ** 3) + 3 * u1 * ((1 - t) ** 2) * t + 3 * u2 * (1 - t) * (t ** 2) + u3 * (t ** 3)
-};
-
+const heightCurve = Bezier(1, 0, 0.85, 0.85);
 const AMPLITUDE = 60.0;
+
 export const generateHeightMap = (noiseMap) => {
 
   for (let i = 0; i < noiseMap.length; i++) {

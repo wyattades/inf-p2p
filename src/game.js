@@ -117,9 +117,11 @@ export const init = () => {
 
 
   // Fog
-  const fog = new THREE.FogExp2(0x8cb8ff, 0.0009);
-  app.scene.fog = fog;
-  app.renderer.setClearColor(fog.color, 1);
+  if (options.get('fog')) {
+    const fog = new THREE.FogExp2(0x8cb8ff, 0.002);
+    app.scene.fog = fog;
+    app.renderer.setClearColor(fog.color, 0.5);
+  }
 
   // first person controls
   const controls = new Controls(app);

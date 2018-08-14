@@ -11,6 +11,7 @@
     "postinstall": "node utils/treeShakeThreeJs.js"
   },
   "dependencies": {
+    "bezier-easing": "^2.1.0",
     "dexie": "^2.0.4",
     "mainloop.js": "^1.0.4",
     "seedrandom": "^2.4.3",
