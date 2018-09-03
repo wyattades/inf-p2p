@@ -1,4 +1,6 @@
 
+// TODO way for user to edit options
+
 // Defaults
 const opt = {
   renderDist: 2,
@@ -41,30 +43,3 @@ export const set = (key, val) => {
 };
 
 export const get = (key) => opt[key];
-
-// function opti(type, _default) {
-//   this.type = type;
-//   this.value = this.default = _default;
-//   return this;
-// }
-
-// opti.prototype.min = function min(val) {
-//   this.min = val;
-//   return this;
-// };
-
-// opti.prototype.max = function max(val) {
-//   this.max = val;
-//   return this;
-// };
-
-// opti.prototype.set = function max(val) {
-//   let valid = false;
-//   if (this.type === 'float') valid = n === +n && n !== (n|0);
-//   else if (this.type === 'int') valid = n === +n && n === (n|0);
-//   else if (this.type === 'string') valid = typeof val === 'string';
-//   else if (this.type === 'boolean') valid = typeof val === 'boolean';
-//   if (valid)
-//     this.value = val;
-//   else console.warn('Set invalid option:', )
-// };

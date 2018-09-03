@@ -40,6 +40,7 @@ export const init = (player) => {
   player.y = y === +y ? y : startPos.y;
   player.z = z === +z ? z : startPos.z;
 
+  // Save position every three seconds
   setInterval(() => save(player), 3000);
 
   window.addEventListener('beforeunload', () => save(player));

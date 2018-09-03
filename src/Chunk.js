@@ -3,10 +3,27 @@ import { CHUNK_SEGMENTS, SEGMENT_SIZE } from './constants';
 import * as options from './options';
 
 
-const groundMaterial = new THREE.MeshLambertMaterial({
+// const groundMaterial = new THREE.MeshLambertMaterial({
+//   vertexColors: THREE.FaceColors,
+// });
+
+const groundMaterial = new THREE.MeshPhongMaterial({
   vertexColors: THREE.FaceColors,
-  // wireframe: true,
+  flatShading: true,
+  shininess: 10,
 });
+
+// const colors = [new THREE.Color(255, 0, 0), new THREE.Color(0, 255, 0), new THREE.Color(255, 255, 0)];
+// const ranges = [0, 0.4, 0.6];
+
+// const groundMaterial = new THREE.ShaderMaterial({
+//   lights: true,
+
+//   uniforms: {
+//     colors: new THREE.Uniform(colors),
+//     ranges: new THREE.Uniform(ranges),
+//   },
+// });
 
 const groundRayCaster = new THREE.Raycaster(new THREE.Vector3(0, 10000, 0), new THREE.Vector3(0, -1, 0));
 

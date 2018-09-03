@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 
 import * as ui from './ui';
-import { clamp } from './utils';
 
+
+// TODO gamepad support, cars???
+// TODO seperate keyevents, player, and physics
 
 // Key constants
 const K_FORWARD = 'W'.charCodeAt(0);
@@ -153,6 +155,12 @@ export default class Controls {
     camera.rotation.set(0, 0, 0);
     camera.rotateY(this.rotation.y);
     camera.rotateX(this.rotation.x);
+  }
+
+  clearPresses() {
+    for (const key in this.keystate) {
+      this.keystate[key] = false;
+    }
   }
 
 }

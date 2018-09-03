@@ -40,8 +40,9 @@ export default class ChunkLoader {
       }
 
       // What a hack...
+      const initialChunkAmount = (this.renderDist * 2 + 1) ** 2;
       const intervalId = window.setInterval(() => {
-        if (this.loadedCount >= (this.renderDist * 2 + 1) * (this.renderDist * 2 + 1)) {
+        if (this.loadedCount >= initialChunkAmount) {
           this.ready = true;
           window.clearInterval(intervalId);
           resolve();
