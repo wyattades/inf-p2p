@@ -35,6 +35,7 @@ export default class Chunk {
     this.x = x;
     this.z = z;
     this.mesh = null;
+    this.isChunk = true;
   }
 
   getHeightAt(x, z) {

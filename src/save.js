@@ -1,10 +1,17 @@
+import * as THREE from 'three';
 
 
-export const save = (player) => {
+const startPos = {
+  x: 1,
+  y: 100,
+  z: 1,
+};
+
+const save = (pos) => {
   const data = {
-    x: player.x,
-    y: player.y,
-    z: player.z,
+    x: pos.x,
+    y: pos.y,
+    z: pos.z,
   };
   localStorage.setItem('save', JSON.stringify(data));
 };
@@ -17,31 +24,33 @@ const load = () => {
     // Do nothing
   }
   
+  const pos = new THREE.Vector3(startPos.x, startPos.y, startPos.z);
   if (data && typeof data === 'object') {
-    return data;
+    const { x, y, z } = data;
+    if (x === +x) pos.x = x;
+    if (y === +y) pos.y = y;
+    if (z === +z) pos.z = z;
+    return pos;
   } else {
-    return {};
+    return pos;
   }
-};
-
-const startPos = {
-  x: 0,
-  y: 100,
-  z: 0,
 };
 
 // Set initial position of player
 // Save position every few seconds
-export const init = (player) => {
+export const init = (pos) => {
 
-  const { x, y, z } = load();
+  // Initial position
+  pos.clone(load());
 
-  player.x = x === +x ? x : startPos.x;
-  player.y = y === +y ? y : startPos.y;
-  player.z = z === +z ? z : startPos.z;
+  const savePos = () => save(pos);
 
-  // Save position every three seconds
-  setInterval(() => save(player), 3000);
+  // Save position every 5 seconds, and before unload
+  const saveInterval = window.setInterval(savePos, 5000);
+  window.addEventListener('beforeunload', savePos);
 
-  window.addEventListener('beforeunload', () => save(player));
+  return () => {
+    window.clearInterval(saveInterval);
+    window.removeEventListener('beforeunload', savePos);
+  };
 };

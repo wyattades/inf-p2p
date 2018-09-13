@@ -6,7 +6,7 @@
  *  tree.
  */
 
-'use strict';
+// TODO
 
 let localConnection;
 let remoteConnection;

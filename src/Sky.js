@@ -224,6 +224,7 @@ class Sky extends THREE.Mesh {
 
     this.setSunPos(0.245, 0.35);
 
+    this.position.y = -100;
     this.scale.setScalar(450000);
   }
 

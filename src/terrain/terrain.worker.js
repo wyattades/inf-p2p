@@ -9,7 +9,7 @@ import colorMap from './colorMap';
 import { SEGMENT_SIZE, CHUNK_SEGMENTS } from '../constants';
 
 
-// TODO improve geometry creation by using BufferPlaneGeometry
+// TODO optimize geometry creation by using BufferPlaneGeometry
 // TODO reduce cached data
 
 const mapCache = new MapCache('world1');
@@ -45,7 +45,7 @@ const generateChunk = (x, z) => {
   const bufferGeom = new BufferGeometry().fromGeometry(geom);
 
   return bufferGeom.attributes;
-}
+};
 
 const loadChunk = ({ x, z }) => {
   // Attempt to load from cache
