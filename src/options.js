@@ -6,7 +6,7 @@ const opt = {
   renderDist: 2,
   quality: 1.0,
   shadows: true,
-  mouseSensitivity: 1.0,
+  mouseSensitivity: 3,
   antialias: false,
   fog: true,
 };
@@ -33,13 +33,31 @@ const save = () => {
 const loaded = load();
 for (const key in opt) {
   const val = loaded[key];
-  if (val && typeof val === typeof opt[key])
+  if (typeof val === typeof opt[key])
     opt[key] = val;
 }
 
+let changed = 0;
+let oldOpt = Object.assign({}, opt);
+
 export const set = (key, val) => {
+  if (!(key in opt)) console.error('Invalid option:', key);
   opt[key] = val;
+  if (oldOpt[key] === opt[key]) changed--;
+  else changed++;
   save();
 };
 
-export const get = (key) => opt[key];
+export const get = (key) => {
+  if (!(key in opt)) console.error('Invalid option:', key);
+  return opt[key];
+};
+
+export const checkChanged = () => {
+  if (changed > 0) {
+    changed = 0;
+    oldOpt = Object.assign({}, opt);
+    return true;
+  }
+  return false;
+};

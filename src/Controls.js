@@ -1,47 +1,85 @@
 import * as THREE from 'three';
-
-import * as ui from './ui';
+import * as options from './options';
 
 
 // TODO gamepad support, cars???
-// TODO seperate keyevents, player, and physics
 
-// Key constants
-const K_FORWARD = 'W'.charCodeAt(0);
-const K_BACKWARD = 'S'.charCodeAt(0);
-const K_STRAFE_LEFT = 'A'.charCodeAt(0);
-const K_STRAFE_RIGHT = 'D'.charCodeAt(0);
-const K_JUMP = ' '.charCodeAt(0);
-
-const K_UP = 38;
-const K_DOWN = 40;
-const K_LEFT = 37;
-const K_RIGHT = 39;
+const DEFAULT_KEYBINDS = {
+  forward: 87, // w
+  strafeLeft: 65, // a
+  backward: 83, // s
+  strafeRight: 68, // d
+  cameraUp: 38, // ARROW_UP
+  cameraDown: 40, // ARROW_DOWN
+  cameraLeft: 37, // ARROW_LEFT
+  cameraRight: 39, // ARROW_RIGHT
+  jump: 32, // SPACE
+  toggleMenu: 27, // ESC
+  toggleInfo: 73, // i
+};
 
 export default class Controls {
 
-  constructor(app) {
-    this.app = app;
-    this.position = new THREE.Vector3(0, 0, 0);
-    this.rotation = new THREE.Vector3(0, 0, 0);
-    this.velocity = new THREE.Vector3(0, 0, 0);
-    this.onGround = false;
+  constructor() {
+    this.rotation = new THREE.Vector2(0, 0);
+
+    this.canvas = document.getElementById('game');
+
+    // TODO save in localStorage
+    this.keybinds = {};
+    
     this.keystate = {};
+    for (const bindName in DEFAULT_KEYBINDS) {
+      const key = DEFAULT_KEYBINDS[bindName];
+      this.keybinds[key] = bindName;
+      this.keystate[bindName] = false;
+    }
   }
 
-  bindEvents() {
+  bindControls() {
     // You can only request pointer lock from a user triggered event
-    const el = document.querySelector('canvas');
-    document.body.addEventListener('mousedown', () => {
-      if (!el.requestPointerLock) {
-        el.requestPointerLock = el.mozRequestPointerLock;
-      }
-      el.requestPointerLock();
-    }, false);
+    this.canvas.addEventListener('mousedown', this.onMousedown, false);
 
     // Update rotation from mouse motion
-    document.body.addEventListener('mousemove', (evt) => {
-      const sensitivity = 0.002;
+    this.canvas.addEventListener('mousemove', this.onMousemove, false);
+
+    // Update keystate from down/up events
+    window.addEventListener('keydown', this.onKeydown, false);
+    window.addEventListener('keyup', this.onKeyup, false);
+
+    // Clear controls when leaving window
+    window.addEventListener('blur', this.onBlur, false);
+
+    this.canvas.requestPointerLock = this.canvas.requestPointerLock || this.canvas.mozRequestPointerLock;
+    document.exitPointerLock = document.exitPointerLock || document.mozExitPointerLock;
+    if ('onpointerlockchange' in document) {
+      document.addEventListener('pointerlockchange', this.onPointerLockChange);
+    } else if ('onmozpointerlockchange' in document) {
+      document.addEventListener('mozpointerlockchange', this.onPointerLockChange);
+    }
+  }
+
+  onPointerLockChange = () => {
+    setTimeout(() => {
+      const playing = window.cheat.gameState === 'PLAYING';
+      const escaping = !document.pointerLockElement;
+      if (playing && escaping) window.cheat.pause();
+      // else if (!escaping) window.cheat.resume();
+    });
+  }
+
+  onBlur = () => {
+    window.cheat.pause();
+  }
+
+  onMousedown = () => {
+    // this.canvas.requestPointerLock();
+    window.cheat.resume();
+  }
+
+  onMousemove = (evt) => {
+    if (window.cheat.gameState === 'PLAYING') {
+      const sensitivity = options.get('mouseSensitivity') / 1000;
       this.rotation.x -= evt.movementY * sensitivity;
       this.rotation.y -= evt.movementX * sensitivity;
       // Constrain viewing angle
@@ -51,115 +89,53 @@ export default class Controls {
       if (this.rotation.x > Math.PI / 2) {
         this.rotation.x = Math.PI / 2;
       }
-    }, false);
-
-    // Update keystate from down/up events
-    window.addEventListener('keydown', (evt) => {
-      this.keystate[evt.which] = true;
-    }, false);
-    window.addEventListener('keyup', (evt) => {
-      this.keystate[evt.which] = false;
-    }, false);
-
+    }
   }
 
-  update(delta) {
-    // Do we even need delta if it's constant?
-    delta = 1 / delta;
-    const speed = delta * 1.1;
-    const rotSpeed = delta * 1.2;
-    const drag = 0.91; // TODO: Use slope
-    const gravity = 0.03; // This doesn't work cause it's not linear... TODO
-    const jumpSpeed = 0.6;
-    const maxSpeed = 0.7;
+  onKeydown = (evt) => {
+    const bindName = this.keybinds[evt.which];
+    if (bindName) {
+      const bind = this.keystate[bindName];
+      if (typeof bind === 'function') bind();
+      else this.keystate[bindName] = true;
+    }
+  }
 
-    const motion = new THREE.Vector3(0, 0, 0);
-    if (this.keystate[K_FORWARD]) {
-      motion.z -= speed;
+  onKeyup = (evt) => {
+    const bindName = this.keybinds[evt.which];
+    if (bindName) {
+      const bind = this.keystate[bindName];
+      if (typeof bind !== 'function') this.keystate[bindName] = false;
     }
-    if (this.keystate[K_BACKWARD]) {
-      motion.z += speed;
-    }
-    if (this.keystate[K_STRAFE_LEFT]) {
-      motion.x -= speed;
-    }
-    if (this.keystate[K_STRAFE_RIGHT]) {
-      motion.x += speed;
-    }
-    if (this.keystate[K_UP]) {
-      this.rotation.x += rotSpeed;
-    }
-    if (this.keystate[K_DOWN]) {
-      this.rotation.x -= rotSpeed;
-    }
-    if (this.keystate[K_LEFT]) {
-      this.rotation.y += rotSpeed;
-    }
-    if (this.keystate[K_RIGHT]) {
-      this.rotation.y -= rotSpeed;
-    }
-    if (this.onGround && this.keystate[K_JUMP]) {
-      this.velocity.y = jumpSpeed;
-    }
+  }
 
-    const rotation = new THREE.Matrix4().makeRotationY(this.rotation.y);
-    motion.applyMatrix4(rotation);
-    this.velocity.add(motion);
-    // const nextPosition = this.position.clone();
-    // nextPosition.add(this.velocity);
-    this.position.add(this.velocity);
+  setKeyBind(bindName, key) {
+    this.keybinds[bindName] = key;
+  }
 
-    // let x = nextPosition.x;
-    // let z = nextPosition.z;
-    // const terrain = this.app.terrain;
-    // // Constrain position to terrain bounds
-    // if (x < 0 || x >= terrain.width - 1) {
-    //   x = this.position.x;
-    // }
-    // if (z < 0 || z >= terrain.height - 1) {
-    //   z = this.position.z;
-    // }
-    // this.position.x = x;
-    // this.position.z = z;
-    // this.position.y = nextPosition.y;
-    // this.position.set(nextPosition);
-
-    const playerHeight = 3;
-    const groundHeight = this.app.chunkLoader.playerChunk.getHeightAt(this.position.x, this.position.z);
-    const groundDist = this.position.y - playerHeight - groundHeight;
-    this.onGround = groundDist <= 0;
-    if (this.onGround) this.velocity.y = 0;
-    if (groundDist < 0) this.position.y = groundHeight + playerHeight;
-    
-    const velY = this.velocity.y;
-    this.velocity.y = 0;
-
-    // drag
-    if (groundDist < 0.5) {
-      this.velocity.multiplyScalar(drag);
-    }
-    this.velocity.clampLength(-maxSpeed, maxSpeed);
-    this.velocity.y = velY;
-
-    // gravity
-    this.velocity.y -= gravity;
-
-    // TEMP?
-    ui.set('x', this.position.x);
-    ui.set('y', this.position.y);
-    ui.set('z', this.position.z);
-    
-    // Apply current transformations to camera
-    const camera = this.app.camera;
-    camera.position.copy(this.position);
-    camera.rotation.set(0, 0, 0);
-    camera.rotateY(this.rotation.y);
-    camera.rotateX(this.rotation.x);
+  bindPress(bindName, fn) {
+    if (bindName in DEFAULT_KEYBINDS) {
+      this.keystate[bindName] = fn;
+    } else console.error('Invalid keybind action:', bindName);
   }
 
   clearPresses() {
-    for (const key in this.keystate) {
-      this.keystate[key] = false;
+    for (const bindName in this.keystate) {
+      if (typeof this.keystate[bindName] !== 'function')
+        this.keystate[bindName] = false;
+    }
+  }
+
+  unbindControls() {
+    window.removeEventListener('blur', this.onBlur);
+    window.removeEventListener('keydown', this.onKeydown);
+    window.removeEventListener('keyup', this.onKeyup);
+    this.canvas.removeEventListener('mousemove', this.onMousemove);
+    this.canvas.removeEventListener('mousedown', this.onMousedown);
+    if ('onpointerlockchange' in document) {
+      document.removeEventListener('pointerlockchange', this.onPointerLockChange);
+    } else if ('onmozpointerlockchange' in document) {
+      document.removeEventListener('mozpointerlockchange', this.onPointerLockChange);
     }
   }
 
