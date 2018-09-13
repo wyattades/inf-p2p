@@ -11,22 +11,57 @@ html {
   font-family: monospace;
 }
 
-// section {
-//   padding: 0 3rem;
-//   margin: 4rem 0;
-// }
-
-// .container {
-//   max-width: 900px;
-//   margin: 0 auto;
-// }
-
-p {
+p, button, label {
+  border: none;
+  outline: none;
+  background: none;
   color: white;
   font-weight: bold;
   margin: 0;
-  font-size: 1.5em;
+  font-size: 20px;
   line-height: 120%;
+}
+
+.hidden {
+  display: none !important;   
+}
+
+#menu {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: fixed; 
+  left: 0; 
+  right: 0;
+  top: 0;
+  bottom: 0; 
+  margin: auto; 
+  width: 400px;
+  height: 300px;
+  padding: 16px;
+  color: white;
+  background-color: rgba(124, 124, 124, 0.7);
+  label {
+    display: block;
+  }
+  button {
+    align-self: flex-start;
+    cursor: pointer;
+    &::before {
+      // display: block;
+      content: '↴ ';
+    }
+  }
+  p {
+    color: rgba(255, 255, 255, 0.6);
+  }
+  input[type=range] {
+    vertical-align: middle;
+    margin: 0 8px;
+  }
+  .rangeval {
+    color: #ccc;
+  }
 }
 
 #game {

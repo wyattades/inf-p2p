@@ -2,6 +2,30 @@ extends ../node_modules/webpack-boiler/template.pug
 
 block page_content
   canvas#game
+  #info
+  #menu.hidden
+    p Paused
+    #options
+      label
+        | Render Distance
+        input(type="range" min="1" max="5" step="1" name="renderDist")
+        span.rangeval
+      label
+        input(type="checkbox" name="antialias")
+        | Antialiasing
+      label
+        input(type="checkbox" name="fog")
+        | Fog
+      label
+        input(type="checkbox" name="shadows")
+        | Shadows
+      label
+        | Sensitivity
+        input(type="range" min="1" max="100" step="1" name="mouseSensitivity")
+        span.rangeval
+    p
+      em Use WASD and the mouse to control the character.
+    button(type="button") Resume
   #loader
     p Initializing world
     .loader
