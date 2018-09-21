@@ -1,6 +1,4 @@
 
-// TODO way for user to edit options
-
 // Defaults
 const opt = {
   renderDist: 2,
@@ -10,6 +8,7 @@ const opt = {
   antialias: false,
   fog: true,
 };
+let changed = {};
 
 const load = () => {
   let data;
@@ -27,7 +26,7 @@ const load = () => {
 };
 
 const save = () => {
-  localStorage.setItem('options', JSON.stringify(opt));
+  localStorage.setItem('options', JSON.stringify(Object.assign({}, opt, changed)));
 };
 
 const loaded = load();
@@ -37,14 +36,15 @@ for (const key in opt) {
     opt[key] = val;
 }
 
-let changed = 0;
-let oldOpt = Object.assign({}, opt);
-
 export const set = (key, val) => {
-  if (!(key in opt)) console.error('Invalid option:', key);
-  opt[key] = val;
-  if (oldOpt[key] === opt[key]) changed--;
-  else changed++;
+  if (!(key in opt)) {
+    console.error('Invalid option:', key);
+    return;
+  }
+  
+  if (opt[key] === val) delete changed[key];
+  else changed[key] = val;
+
   save();
 };
 
@@ -54,10 +54,11 @@ export const get = (key) => {
 };
 
 export const checkChanged = () => {
-  if (changed > 0) {
-    changed = 0;
-    oldOpt = Object.assign({}, opt);
-    return true;
+  for (const _ in changed) {
+    Object.assign(opt, changed);
+    const _changed = changed;
+    changed = {};
+    return _changed;
   }
-  return false;
+  return {};
 };

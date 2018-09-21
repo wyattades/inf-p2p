@@ -5,10 +5,10 @@ import * as THREE from 'three';
 
 export default class Player {
   
-  constructor(app) {
-    this.chunkLoader = app.chunkLoader;
-    this.rotation = app.controls.rotation;
-    this.keystate = app.controls.keystate;
+  constructor(game) {
+    this.chunkLoader = game.chunkLoader;
+    this.rotation = game.controls.rotation;
+    this.keystate = game.controls.keystate;
     this.position = new THREE.Vector3(0, 0, 0);
     this.velocity = new THREE.Vector3(0, 0, 0);
     this.onGround = false;
@@ -68,8 +68,8 @@ export default class Player {
     this.position.add(this.velocity);
 
     // hit ground
-    const playerHeight = 2.9;
-    const groundHeight = this.chunkLoader.playerChunk.getHeightAt(this.position.x, this.position.z);
+    const playerHeight = 3.0;
+    const groundHeight = this.chunkLoader.getHeightAt(this.position.x, this.position.z);
     const groundDist = this.position.y - playerHeight - groundHeight;
     this.onGround = groundDist <= 0;
     if (this.onGround) this.velocity.y = 0;

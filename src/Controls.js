@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import * as options from './options';
+import * as GameState from './GameState';
 
 
 // TODO gamepad support, cars???
@@ -20,7 +21,9 @@ const DEFAULT_KEYBINDS = {
 
 export default class Controls {
 
-  constructor() {
+  constructor(game) {
+    this.game = game;
+
     this.rotation = new THREE.Vector2(0, 0);
 
     this.canvas = document.getElementById('game');
@@ -61,24 +64,22 @@ export default class Controls {
 
   onPointerLockChange = () => {
     setTimeout(() => {
-      const playing = window.cheat.gameState === 'PLAYING';
+      const playing = this.game.state === GameState.PLAYING;
       const escaping = !document.pointerLockElement;
-      if (playing && escaping) window.cheat.pause();
-      // else if (!escaping) window.cheat.resume();
+      if (playing && escaping) this.game.setState(GameState.PAUSED);
     });
   }
 
   onBlur = () => {
-    window.cheat.pause();
+    this.game.setState(GameState.PAUSED);
   }
 
   onMousedown = () => {
-    // this.canvas.requestPointerLock();
-    window.cheat.resume();
+    this.game.setState(GameState.PLAYING);
   }
 
   onMousemove = (evt) => {
-    if (window.cheat.gameState === 'PLAYING') {
+    if (this.game.state === GameState.PLAYING) {
       const sensitivity = options.get('mouseSensitivity') / 1000;
       this.rotation.x -= evt.movementY * sensitivity;
       this.rotation.y -= evt.movementX * sensitivity;

@@ -9,12 +9,15 @@ import * as ui from './ui';
 import * as options from './options';
 import * as save from './save';
 import Sky from './Sky';
+import * as GameState from './GameState';
+import Client from './Client';
+import { loadModel } from './models';
 
 
 const $game = document.getElementById('game');
 const $loader = document.getElementById('loader');
 
-export default class App {
+export default class Game {
 
   constructor() {
     this.init();
@@ -31,16 +34,20 @@ export default class App {
     this.createScene();
     this.createRenderer();
 
+    this.tick = 0;
     this.time = 10;
     this.setTime(this.time);
 
     this.chunkLoader = new ChunkLoader(this.scene, options.get('renderDist'));
 
-    this.controls = new Controls();
+    this.controls = new Controls(this);
     this.player = new Player(this);
+
     this.stopSaving = save.init(this.player.position);
 
-    this.setState('LOADING');
+    this.client = new Client(this.player);
+
+    this.setState(GameState.LOADING);
     
     // Resize camera and renderer on window resize
     window.addEventListener('resize', this.resize);
@@ -87,11 +94,7 @@ export default class App {
   reload() {
     this.dispose();
     this.init();
-
-    this.chunkLoader.loadInitial(this.player.position.x, this.player.position.z).then(() => {
-      this.start();
-    })
-    .catch(console.error);
+    this.start();
   }
 
   // Resize viewport
@@ -109,52 +112,104 @@ export default class App {
     const angle = -norm * 2 * Math.PI - Math.PI / 2;
     this.dirLight.position.set(Math.cos(angle), Math.sin(angle), 0).normalize();
     this.sky.setSunPos(0, norm + 0.75);
-    this.scene.fog.color.setHSL(0, 0, Math.max(Math.sin(Math.PI * norm), 0.45) - 0.35);
+    if (this.scene.fog) this.scene.fog.color.setHSL(0, 0, Math.max(Math.sin(Math.PI * norm), 0.45) - 0.35);
   }
 
   start() {
-    // Start the update and render loops
-    MainLoop.setUpdate(this.update).setDraw(this.render).setEnd(this.updateEnd).start();
 
-    this.controls.bindControls();
+    this.chunkLoader.loadInitial(this.player.position.x, this.player.position.z)
+    .then(() => {
 
-    ui.set('chunkX', this.chunkLoader.playerChunk.x);
-    ui.set('chunkZ', this.chunkLoader.playerChunk.z);
+      // Start the update and render loops
+      MainLoop.setUpdate(this.update).setDraw(this.render).setEnd(this.updateEnd).start();
 
-    this.controls.bindPress('toggleInfo', ui.toggleInfo);
-    this.controls.bindPress('toggleMenu', () => {
-      if (this.state === 'PAUSED') { // TODO not working
-        setTimeout(() => this.state === 'PAUSED' && this.setState('PLAYING'), 200);
-      } else if (this.state === 'PLAYING') {
-        this.setState('PAUSED');
-      }
+      this.controls.bindControls();
+
+      ui.set('chunkX', this.chunkLoader.playerChunk.x);
+      ui.set('chunkZ', this.chunkLoader.playerChunk.z);
+
+      this.controls.bindPress('toggleInfo', ui.toggleInfo);
+      this.controls.bindPress('toggleMenu', () => {
+        if (this.state === GameState.PAUSED) { // TODO not working
+          setTimeout(() => this.state === GameState.PAUSED && this.setState(GameState.PLAYING), 200);
+        } else if (this.state === GameState.PLAYING) {
+          this.setState(GameState.PAUSED);
+        }
+      });
+      // loadModel('person')
+      // .then((obj) => {
+      //   obj.scale.setScalar(0.034);
+      //   obj.rotateX(-Math.PI / 2);
+      //   obj.position.set(-100, -0, 66);
+      //   this.scene.add(obj);
+      // });
+
+      this.client.init();
+      this.client.once('connect', () => {
+        loadModel('person')
+        .then((obj) => {
+          obj.scale.setScalar(0.034);
+          obj.rotateX(-Math.PI / 2);
+          this.scene.add(obj);
+          this.enemy = obj;
+
+          this.client.on('update', this.enemyUpdate);
+        })
+        .catch(console.error);
+      });
+
+      this.setState(GameState.PLAYING);
+
+    })
+    .catch((err) => {
+      console.error(err);
+      this.setState(GameState.ERROR);
     });
-
-    this.setState('PLAYING');
   }
 
-  // TODO: Fancier state transitions
+  // TODO: Fancier state transitions?
   setState(newState) {
-    console.log('updateState:', this.state, newState);
+    
+    this.state = newState;
 
-    // if (this.state === newState) return;
-
-    window.cheat.gameState = this.state = newState;
-
-    if (newState === 'PLAYING') {
-      // Reload game on resume if options have changed
-      if (options.checkChanged()) {
-        this.reload();
-        return;
+    if (newState === GameState.PLAYING) {
+      // On unpause:
+      if (this.state === GameState.PAUSED) {
+        // Update game if options changed
+        const changed = options.checkChanged();
+        for (const key in changed) {
+          if (key === 'renderDist') {
+            this.reload();
+            return;
+          } else if (key === 'fog') {
+            this.scene.fog = changed[key] ? new THREE.FogExp2(0xe2f6ff, 0.002) : null;
+          } else if (key === 'antialias' || key === 'shadows') {
+            this.renderer.dispose();
+            this.createRenderer();
+          }
+        }
       }
       if (this.canvas.requestPointerLock) this.canvas.requestPointerLock();
-    } else if (newState === 'PAUSED') {
+    } else if (newState === GameState.PAUSED) {
       if (document.exitPointerLock) document.exitPointerLock();
     }
     
-    $loader.classList[newState === 'LOADING' ? 'remove' : 'add']('hidden');
-    ui.setActiveMenu(newState === 'PAUSED'); // TEMP
+    $loader.classList[newState === GameState.LOADING ? 'remove' : 'add']('hidden');
+    ui.setActiveMenu(newState === GameState.PAUSED); // TEMP
     this.controls.clearPresses();
+  }
+
+  enemyUpdate = (data) => {
+    if (!this.enemy) return;
+
+    if (!data) {
+      console.warn('Bad data');
+      return;
+    }
+
+    this.enemy.position.copy(data.position);
+    this.enemy.position.y -= 3;
+    this.enemy.rotation.z = data.rotation.y + Math.PI;
   }
 
   updateEnd = (fps, panic) => {
@@ -167,11 +222,12 @@ export default class App {
   }
 
   update = (delta) => {
-    if (this.state !== 'PLAYING') return;
+    if (this.state !== GameState.PLAYING) return;
 
+    this.tick++;
     this.time += 0.01;
-    if (!this.xx) this.xx = 0;
-    ((this.xx = this.xx++ % 5) === 0) && this.setTime(this.time);
+    
+    if (this.tick % 5 === 0) this.setTime(this.time);
 
     this.player.update(delta);
     ui.set('x', this.player.position.x);
@@ -203,6 +259,7 @@ export default class App {
 
   dispose() {
     this.stopSaving();
+    this.client.dispose();
     this.renderer.dispose();
     this.controls.unbindControls();
     window.removeEventListener('resize', this.resize);

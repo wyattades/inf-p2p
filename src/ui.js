@@ -21,7 +21,7 @@ document.querySelectorAll('#options [name]').forEach((el) => {
     options.set(key, val);
   };
 });
-$menu.querySelector('button').onclick = () => window.cheat.resume();
+document.getElementById('resume').onclick = () => window.cheat.resume();
 
 const vals = {
   chunkX: null,

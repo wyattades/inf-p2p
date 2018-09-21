@@ -41,7 +41,7 @@ const load = () => {
 export const init = (pos) => {
 
   // Initial position
-  pos.clone(load());
+  pos.copy(load());
 
   const savePos = () => save(pos);
 

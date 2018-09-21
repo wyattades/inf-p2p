@@ -25,22 +25,25 @@ export default class ChunkLoader {
   }
 
   loadInitial(playerX, playerZ) {
-    return new Promise((resolve) => {
-      const px = Math.floor(playerX / Chunk.SIZE);
-      const pz = Math.floor(playerZ / Chunk.SIZE);
-  
-      for (let i = 0; i < this.renderDist * 2 + 1; i++) {
-        for (let j = 0; j < this.renderDist * 2 + 1; j++) {
-          const chunk = this._requestLoadChunk(
-            px + i - this.renderDist,
-            pz + j - this.renderDist,
-          );
-          if (i === this.renderDist && j === this.renderDist) this.playerChunk = chunk;
-        }
-      }
+    this.unloadChunks();
 
-      // What a hack...
-      const initialChunkAmount = (this.renderDist * 2 + 1) ** 2;
+    const px = Math.floor(playerX / Chunk.SIZE);
+    const pz = Math.floor(playerZ / Chunk.SIZE);
+
+    for (let i = 0; i < this.renderDist * 2 + 1; i++) {
+      for (let j = 0; j < this.renderDist * 2 + 1; j++) {
+        const chunk = this._requestLoadChunk(
+          px + i - this.renderDist,
+          pz + j - this.renderDist,
+        );
+        if (i === this.renderDist && j === this.renderDist) this.playerChunk = chunk;
+      }
+    }
+
+    const initialChunkAmount = (this.renderDist * 2 + 1) ** 2;
+
+    // What a hack...
+    return new Promise((resolve) => {
       const intervalId = window.setInterval(() => {
         if (this.loadedCount >= initialChunkAmount) {
           this.ready = true;
@@ -104,7 +107,7 @@ export default class ChunkLoader {
     this.playerChunk = this.chunks[`${x},${z}`];
     if (!this.playerChunk) {
       this.playerChunk = this._requestLoadChunk(x, z);
-      console.log('Invalid playerChunk', x, z);
+      console.warn('Invalid playerChunk', x, z);
     }
 
     // Unload chunks
@@ -123,8 +126,19 @@ export default class ChunkLoader {
     }
   }
 
+  getHeightAt(x, z) {
+    if (!this.playerChunk) return 0;
+    
+    return this.playerChunk.getHeightAt(x, z);
+  }
+
   clearCache() {
     this.worker.postMessage({ cmd: 'clearCache' });
+  }
+
+  unloadChunks() {
+    this.scene.remove(Object.values(this.chunks).map((c) => c.mesh));
+    this.chunks = {};
   }
 
 }
