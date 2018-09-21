@@ -111,6 +111,7 @@ export default class Game {
     const norm = hour / 24;
     const angle = -norm * 2 * Math.PI - Math.PI / 2;
     this.dirLight.position.set(Math.cos(angle), Math.sin(angle), 0).normalize();
+    this.dirLight.intensity = Math.sin(angle);
     this.sky.setSunPos(0, norm + 0.75);
     if (this.scene.fog) this.scene.fog.color.setHSL(0, 0, Math.max(Math.sin(Math.PI * norm), 0.45) - 0.35);
   }
@@ -169,12 +170,14 @@ export default class Game {
 
   // TODO: Fancier state transitions?
   setState(newState) {
-    
+
+    const oldState = this.state;
+
     this.state = newState;
 
     if (newState === GameState.PLAYING) {
       // On unpause:
-      if (this.state === GameState.PAUSED) {
+      if (oldState === GameState.PAUSED) {
         // Update game if options changed
         const changed = options.checkChanged();
         for (const key in changed) {
@@ -225,7 +228,7 @@ export default class Game {
     if (this.state !== GameState.PLAYING) return;
 
     this.tick++;
-    this.time += 0.01;
+    this.time += 0.005;
     
     if (this.tick % 5 === 0) this.setTime(this.time);
 

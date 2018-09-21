@@ -1,19 +1,10 @@
-// import * as THREE from 'three';
-
-import MTLLoader from './models/MTLLoader';
-import OBJLoader from './models/OBJLoader';
+import * as THREE from 'three';
 
 
-export const loadModel = (name) => new Promise((resolve, reject) => {
-  new MTLLoader()
-  .load(`models/${name}.mtl`, (materials) => {
-
-    materials.preload();
-
-    new OBJLoader()
-    .setMaterials(materials)
-    .load(`models/${name}.obj`, (object) => {
-      resolve(object);
-    }, null, reject);
-  });
+export const loadModel = (name) => window.fetch(`models/${name}.json`)
+.then((res) => res.json())
+.then((res) => {
+  console.log(res);
+  const obj = new THREE.ObjectLoader().parse(res);
+  return obj;
 });

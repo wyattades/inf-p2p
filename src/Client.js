@@ -50,7 +50,7 @@ export default class Client extends EventEmitter {
 
   onSubmit = (e) => {
     e.preventDefault();
-    const val = $text.value;
+    const val = $text.value.trim();
     
     if (!val) this.initiator = true;
 
@@ -58,7 +58,7 @@ export default class Client extends EventEmitter {
     
     if (val) this.p.signal({
       type: 'offer',
-      sdp: val,
+      sdp: window.atob(val),
     });
   }
 
@@ -106,10 +106,8 @@ export default class Client extends EventEmitter {
     });
 
     this.p.on('signal', (data) => {
-      if (data.type === 'offer') {
-        $text.value = data.sdp;
-      } else if (data.type === 'answer') {
-        $text.value = data.sdp;
+      if (data.type === 'offer' || data.type === 'answer') {
+        $text.value = window.btoa(data.sdp);
       }
     });
 
@@ -119,7 +117,7 @@ export default class Client extends EventEmitter {
         e.preventDefault();
         this.p.signal({
           type: 'answer',
-          sdp: $text.value,
+          sdp: window.atob($text.value.trim()),
         });
       };
       $p2p.addEventListener('submit', onSubmit);
