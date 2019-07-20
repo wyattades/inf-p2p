@@ -4,7 +4,7 @@ const opt = {
   renderDist: 2,
   quality: 1.0,
   shadows: true,
-  mouseSensitivity: 3,
+  mouseSensitivity: 8,
   antialias: false,
   fog: true,
 };

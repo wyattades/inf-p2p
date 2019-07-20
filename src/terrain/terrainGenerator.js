@@ -18,10 +18,7 @@ const genNoiseMap = ({
 
   if (scale <= 0.0) scale = 0.0001;
 
-  const mapWidth = CHUNK_SEGMENTS;
-  const mapHeight = CHUNK_SEGMENTS;
-
-  const noiseMap = new Float32Array(mapWidth * mapHeight);
+  const noiseMap = new Float32Array(CHUNK_SEGMENTS * CHUNK_SEGMENTS);
   
   const prng = new Seedrandom(seed);
   const simplex = new SimplexNoise(seed);
@@ -40,19 +37,18 @@ const genNoiseMap = ({
   }
 
 
-  const halfWidth = mapWidth / 2.0;
-  const halfHeight = mapHeight / 2.0;
+  const halfSize = CHUNK_SEGMENTS / 2.0;
 
-  for (let y = 0; y < mapHeight; y++) {
-    for (let x = 0; x < mapWidth; x++) {
+  for (let y = 0; y < CHUNK_SEGMENTS; y++) {
+    for (let x = 0; x < CHUNK_SEGMENTS; x++) {
   
       amplitude = 1.0;
       let frequency = 1.0;
       let noiseHeight = 0.0;
 
       for (let i = 0; i < octaves; i++) {
-        const sampleX = (x - halfWidth + octaveOffsets[i].x) / scale * frequency;
-        const sampleY = (y - halfHeight + octaveOffsets[i].y) / scale * frequency;
+        const sampleX = (x - halfSize + octaveOffsets[i].x) / scale * frequency;
+        const sampleY = (y - halfSize + octaveOffsets[i].y) / scale * frequency;
 
         // Returns [-1,1]
         const perlinValue = simplex.noise2D(sampleX, sampleY);
@@ -62,7 +58,7 @@ const genNoiseMap = ({
         frequency *= lacunarity;
       }
 
-      noiseMap[x * mapWidth + y] = Math.max(0.0, (noiseHeight + 1.0) / (maxHeight * MAGIC_MAX_HEIGHT_SCALE));
+      noiseMap[x * CHUNK_SEGMENTS + y] = Math.max(0.0, (noiseHeight + 1.0) / (maxHeight * MAGIC_MAX_HEIGHT_SCALE));
     }
   }
 

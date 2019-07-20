@@ -18,16 +18,10 @@ export default class Player {
     this.position.set(x, y, z);
   }
 
-  update(delta) {
-    // Do we even need delta if it's constant?
-    // TODO move constants
-    delta = 1 / delta;
+  updateControls(delta) {
     const speed = delta * 1.1;
     const rotSpeed = delta * 1.2;
-    const drag = 0.91; // TODO: Use slope
-    const gravity = 0.03; // This doesn't work cause it's not linear... TODO
     const jumpSpeed = 0.6;
-    const maxSpeed = 0.7;
 
     // Apply controls to motion
     const motion = new THREE.Vector3(0, 0, 0);
@@ -65,6 +59,16 @@ export default class Player {
 
     // add acc and vel
     this.velocity.add(motion);
+  }
+
+  update(delta) {
+    // Do we even need delta if it's constant?
+    // TODO move constants
+    const drag = 0.91; // TODO: Use slope
+    const gravity = 0.03; // This doesn't work cause it's not linear... TODO
+    const maxSpeed = 0.7;
+
+    
     this.position.add(this.velocity);
 
     // hit ground

@@ -31,9 +31,10 @@ export default class Chunk {
 
   static SIZE = CHUNK_SEGMENTS * SEGMENT_SIZE;
 
-  constructor(x, z) {
+  constructor(x, z, lod = 1) {
     this.x = x;
     this.z = z;
+    this.lod = lod;
     this.mesh = null;
     this.isChunk = true;
   }
@@ -80,6 +81,12 @@ export default class Chunk {
     // return y || 0.0;
   }
 
+  setLOD(lod) {
+    if (this.lod === lod) return;
+
+    this.mesh.geometry.dispose();
+  }
+
   setTerrain(attr) {
 
     const geometry = new THREE.BufferGeometry();
@@ -89,7 +96,9 @@ export default class Chunk {
     }
 
     this.mesh = new THREE.Mesh(geometry, groundMaterial.clone());
+    this.mesh.matrixAutoUpdate = false;
     this.mesh.position.set((this.x + 0.5) * Chunk.SIZE, 0, (this.z + 0.5) * Chunk.SIZE);
+    this.mesh.updateMatrix();
     this.mesh.castShadow = this.mesh.receiveShadow = options.get('shadows');
   }
 

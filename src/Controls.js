@@ -17,6 +17,7 @@ const DEFAULT_KEYBINDS = {
   jump: 32, // SPACE
   toggleMenu: 27, // ESC
   toggleInfo: 73, // i
+  clearCache: 80, // p
 };
 
 export default class Controls {
@@ -80,7 +81,7 @@ export default class Controls {
 
   onMousemove = (evt) => {
     if (this.game.state === GameState.PLAYING) {
-      const sensitivity = options.get('mouseSensitivity') / 1000;
+      const sensitivity = options.get('mouseSensitivity') / 3000;
       this.rotation.x -= evt.movementY * sensitivity;
       this.rotation.y -= evt.movementX * sensitivity;
       // Constrain viewing angle

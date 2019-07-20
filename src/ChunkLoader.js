@@ -137,6 +137,7 @@ export default class ChunkLoader {
   }
 
   unloadChunks() {
+    this.loadedCount = 0;
     this.scene.remove(Object.values(this.chunks).map((c) => c.mesh));
     this.chunks = {};
   }

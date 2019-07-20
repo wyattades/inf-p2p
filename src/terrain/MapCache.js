@@ -10,7 +10,7 @@ export default class MapCache {
     this.version = version;
 
     this.db = new Dexie('mapcache');
-    this.db.version(this.version).stores({
+    this.db.version(version).stores({
       [`chunks-${name}`]: '[x+z],modified',
     });
     this.chunks = this.db[`chunks-${name}`];
@@ -26,15 +26,10 @@ export default class MapCache {
   loadChunk(x, z) {
     if (disabled) return Promise.resolve(null);
 
-    // TODO: is this most efficient way to fetch a single item?
     return this.chunks
-    .where({ x, z })
-    .toArray()
+    .get({ x, z })
     .then((res) => {
-      if (res.length) {
-        const row = res[0];
-        if (row && row.chunkData) return row.chunkData;
-      }
+      if (res && res.chunkData) return res.chunkData;
       return null;
     });
   }

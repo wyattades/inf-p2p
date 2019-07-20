@@ -7,11 +7,10 @@ import Controls from './Controls';
 import Player from './Player';
 import * as ui from './ui';
 import * as options from './options';
-import * as save from './save';
+import Saver from './Saver';
 import Sky from './Sky';
 import * as GameState from './GameState';
 import Client from './Client';
-import { loadModel } from './models';
 
 
 const $game = document.getElementById('game');
@@ -43,7 +42,7 @@ export default class Game {
     this.controls = new Controls(this);
     this.player = new Player(this);
 
-    this.stopSaving = save.init(this.player.position);
+    this.saver = new Saver(this.player.position);
 
     this.client = new Client(this.player);
 
@@ -57,30 +56,27 @@ export default class Game {
   createScene() {
     this.scene = new THREE.Scene();
 
-    const hemiLight = new THREE.HemisphereLight(0x3284ff, 0xffc87f, 0.6);
-    hemiLight.position.set(0, 50, 0);
-    this.hemiLight = hemiLight;
-    this.scene.add(hemiLight);
+    // Lights
+
+    this.hemiLight = new THREE.HemisphereLight(0x3284ff, 0xffc87f, 0.7);
+    this.hemiLight.position.set(0, 50, 0);
+    this.scene.add(this.hemiLight);
 
     this.dirLight = new THREE.DirectionalLight(0xfff4e5, 1);
     this.dirLight.castShadow = options.get('shadows');
     this.scene.add(this.dirLight);
 
     // Fog
-    if (options.get('fog')) {
-      this.scene.fog = new THREE.FogExp2(0xe2f6ff, 0.002); // options.get('renderDist') * Chunk.SIZE);
-      // this.scene.fog = new THREE.Fog(0xffffff, 1, 1000); // options.get('renderDist') * Chunk.SIZE);
-      // this.renderer.setClearColor(fog.color, 0.5);
-    }
+    this.scene.fog = options.get('fog') ? new THREE.FogExp2(0xe2f6ff, 0.007 / options.get('renderDist')) : null;
 
+    // Sky box
     this.sky = new Sky();
-
     this.scene.add(this.sky);
   }
 
   createRenderer() {
     this.renderer = new THREE.WebGLRenderer({
-      antialias: options.get('antialias'),
+      antialias: !!options.get('antialias'),
       canvas: this.canvas,
     });
     this.renderer.shadowMap.enabled = options.get('shadows');
@@ -137,18 +133,25 @@ export default class Game {
           this.setState(GameState.PAUSED);
         }
       });
-      // loadModel('person')
-      // .then((obj) => {
+      this.controls.bindPress('clearCache', () => {
+        this.chunkLoader.clearCache();
+        window.setTimeout(() => this.reload(), 200);
+      });
+      // new THREE.ObjectLoader('models/person.json')
+      // .load((obj) => {
       //   obj.scale.setScalar(0.034);
       //   obj.rotateX(-Math.PI / 2);
       //   obj.position.set(-100, -0, 66);
-      //   this.scene.add(obj);
-      // });
+      // }, null, console.error);
 
       this.client.init();
       this.client.once('connect', () => {
-        loadModel('person')
+        window.fetch('models/person.json')
+        .then((res) => res.json())
         .then((obj) => {
+          obj = new THREE.ObjectLoader().parse(obj);
+          // new THREE.ObjectLoader('models/person.json')
+          // .load((obj) => {
           obj.scale.setScalar(0.034);
           obj.rotateX(-Math.PI / 2);
           this.scene.add(obj);
@@ -157,6 +160,7 @@ export default class Game {
           this.client.on('update', this.enemyUpdate);
         })
         .catch(console.error);
+        // }, null, console.error);
       });
 
       this.setState(GameState.PLAYING);
@@ -225,14 +229,16 @@ export default class Game {
   }
 
   update = (delta) => {
-    if (this.state !== GameState.PLAYING) return;
+    delta = 1 / delta;
 
     this.tick++;
     this.time += 0.005;
     
     if (this.tick % 5 === 0) this.setTime(this.time);
 
+    if (this.state === GameState.PLAYING) this.player.updateControls(delta);
     this.player.update(delta);
+
     ui.set('x', this.player.position.x);
     ui.set('y', this.player.position.y);
     ui.set('z', this.player.position.z);
@@ -261,7 +267,7 @@ export default class Game {
   }
 
   dispose() {
-    this.stopSaving();
+    this.saver.stop();
     this.client.dispose();
     this.renderer.dispose();
     this.controls.unbindControls();
