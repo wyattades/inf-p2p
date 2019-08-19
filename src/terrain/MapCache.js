@@ -1,46 +1,52 @@
-import Dexie from 'dexie';
-
-
-const disabled = false; // !!process.env.DEV;
+import { openDB } from 'idb';
 
 export default class MapCache {
-
   constructor(name, version = 1) {
     this.name = name;
     this.version = version;
+    const storeName = `chunks-${name}`;
+    this.storeName = storeName;
+    this.disabled = false; // May enable for development
 
-    this.db = new Dexie('mapcache');
-    this.db.version(this.version).stores({
-      [`chunks-${name}`]: '[x+z],modified',
-    });
-    this.chunks = this.db[`chunks-${name}`];
-  }
-
-  saveChunk(x, z, chunkData) {
-    if (disabled) return Promise.resolve();
-
-    return this.chunks
-    .put({ x, z, chunkData, modified: Date.now() });
-  }
-
-  loadChunk(x, z) {
-    if (disabled) return Promise.resolve(null);
-
-    // TODO: is this most efficient way to fetch a single item?
-    return this.chunks
-    .where({ x, z })
-    .toArray()
-    .then((res) => {
-      if (res.length) {
-        const row = res[0];
-        if (row && row.chunkData) return row.chunkData;
-      }
-      return null;
+    this.db = openDB('mapcache', version, {
+      upgrade(db) {
+        db.createObjectStore(storeName, { keyPath: ['x', 'z'] });
+      },
     });
   }
 
-  clear() {
-    return this.chunks.clear();
+  async saveChunk(x, z, chunkData) {
+    if (this.disabled) return;
+
+    (await this.db).put(this.storeName, {
+      x,
+      z,
+      chunkData,
+      modified: Date.now(),
+    });
   }
 
+  async loadChunk(x, z) {
+    if (this.disabled) return null;
+
+    const data = await (await this.db).get(this.storeName, [x, z]);
+    return (data && data.chunkData) || null;
+  }
+
+  // async loadChunkRange({ x1, x2, z1, z2 }) {
+  //   if (this.disabled) return null;
+  //   // const count = (x2 - x1) * (z2 - z1);
+  //   const res = await (await this.db).getAll(
+  //     this.storeName,
+  //     IDBKeyRange.bound([x1, z1], [x2, z2]),
+  //     // count,
+  //   );
+  //   return res;
+  // }
+
+  async clear() {
+    if (this.disabled) return;
+
+    (await this.db).clear(this.storeName);
+  }
 }

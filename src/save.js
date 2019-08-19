@@ -1,56 +1,98 @@
 import * as THREE from 'three';
 
+// const SERIALIZERS = {
+//   Vector3: {
+//     decode: (obj, prop, val) => prop.set(...val),
+//     encode: (obj, val) => val.toArray(),
+//   },
+//   Vector2: {
+//     decode: (obj, prop, val) => prop.set(...val),
+//     encode: (obj, val) => val.toArray(),
+//   },
+//   // btVector3: {
+//   //   set: (obj, prop, val) => prop.set(...val),
+//   //   get: (obj, val) => val.toArray(),
+//   // },
+//   Quaternion: {
+//     decode: (obj, prop, val) => prop.set(...val),
+//     encode: (obj, val) => val.toArray(),
+//   }
+// };
 
-const startPos = {
-  x: 1,
-  y: 100,
-  z: 1,
-};
+const SAVE_TYPES = [
+  {
+    key: 'position',
+    serializer: {
+      encode: (obj) => obj.position.toArray(),
+      decode: (val) => new THREE.Vector3(...val),
+    },
+  },
+  {
+    key: 'rotation',
+    serializer: {
+      encode: (obj) => obj.chassisMesh.quaternion.toArray(),
+      decode: (val) => new THREE.Quaternion(...val),
+    },
+  },
+];
 
-const save = (pos) => {
-  const data = {
-    x: pos.x,
-    y: pos.y,
-    z: pos.z,
-  };
-  localStorage.setItem('save', JSON.stringify(data));
+const SAVE_KEY = 'inf-p2p:player-save';
+
+const save = (player) => {
+  const data = {};
+  for (const {
+    key,
+    serializer: { encode },
+  } of SAVE_TYPES) {
+    data[key] = encode(player, key);
+  }
+
+  localStorage.setItem(SAVE_KEY, JSON.stringify(data));
 };
 
 const load = () => {
   let data;
   try {
-    data = JSON.parse(localStorage.getItem('save'));
-  } catch (_) {
-    // Do nothing
-  }
-  
-  const pos = new THREE.Vector3(startPos.x, startPos.y, startPos.z);
+    data = JSON.parse(localStorage.getItem(SAVE_KEY));
+  } catch (_) {}
+
+  const values = {};
+
   if (data && typeof data === 'object') {
-    const { x, y, z } = data;
-    if (x === +x) pos.x = x;
-    if (y === +y) pos.y = y;
-    if (z === +z) pos.z = z;
-    return pos;
-  } else {
-    return pos;
+    for (const {
+      key,
+      serializer: { decode },
+    } of SAVE_TYPES) {
+      const keyData = data[key];
+      try {
+        values[key] = decode(keyData);
+      } catch (_) {}
+    }
   }
+
+  return values;
 };
 
-// Set initial position of player
-// Save position every few seconds
-export const init = (pos) => {
+// Set initial position & rotation of player
+// Save position & rotation every few seconds
+class Saver {
+  player = null;
+  values = load();
 
-  // Initial position
-  pos.copy(load());
+  savePos = () => this.player && save(this.player);
 
-  const savePos = () => save(pos);
+  setPlayer(player) {
+    this.player = player;
 
-  // Save position every 5 seconds, and before unload
-  const saveInterval = window.setInterval(savePos, 5000);
-  window.addEventListener('beforeunload', savePos);
+    // Save position every few seconds, and before unload
+    this.saveInterval = window.setInterval(this.savePos, 2000);
+    window.addEventListener('beforeunload', this.savePos);
+  }
 
-  return () => {
-    window.clearInterval(saveInterval);
-    window.removeEventListener('beforeunload', savePos);
-  };
-};
+  dispose() {
+    window.clearInterval(this.saveInterval);
+    window.removeEventListener('beforeunload', this.savePos);
+  }
+}
+
+export default Saver;

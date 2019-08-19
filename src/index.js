@@ -1,4 +1,3 @@
-
 import './styles/style.scss';
 import * as options from './options';
 import * as GameState from './GameState';
@@ -6,22 +5,20 @@ let Game = require('./Game').default;
 
 require.context('./static', true);
 
-
-let game;
+let game = new Game();
+game.start();
 
 window.cheat = {
+  game,
   pause: () => game.setState(GameState.PAUSED),
   resume: () => game.setState(GameState.PLAYING),
   setPos: (x, y, z) => {
     game.player.setPos(x, y, z);
-    game.chunkLoader.loadInitial(game.player.position.x, game.player.position.z).catch(console.error);
+    game.loadTerrain().catch(console.error);
   },
   setTime: (hour) => game.setTime(hour),
   setOption: (key, val) => options.set(key, val),
 };
-
-game = new Game();
-game.start();
 
 if (process.env.NODE_ENV === 'development' && module.hot) {
   module.hot.accept('./Game', () => {
@@ -29,5 +26,6 @@ if (process.env.NODE_ENV === 'development' && module.hot) {
     game.dispose();
     game = new Game();
     game.start();
+    window.cheat.game = game;
   });
 }

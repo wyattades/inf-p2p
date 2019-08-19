@@ -1,15 +1,18 @@
 import * as THREE from 'three';
 
-
 // TODO seperate keyevents, player, and physics
 
 export default class Player {
-  
+  /**
+   * @param {import('../Game').default} game
+   */
   constructor(game) {
+    this.game = game;
+
     this.chunkLoader = game.chunkLoader;
     this.rotation = game.controls.rotation;
     this.keystate = game.controls.keystate;
-    this.position = new THREE.Vector3(0, 0, 0);
+    this.position = new THREE.Vector3(1, 100, 1);
     this.velocity = new THREE.Vector3(0, 0, 0);
     this.onGround = false;
   }
@@ -69,7 +72,10 @@ export default class Player {
 
     // hit ground
     const playerHeight = 3.0;
-    const groundHeight = this.chunkLoader.getHeightAt(this.position.x, this.position.z);
+    const groundHeight = this.chunkLoader.getHeightAt(
+      this.position.x,
+      this.position.z,
+    );
     const groundDist = this.position.y - playerHeight - groundHeight;
     this.onGround = groundDist <= 0;
     if (this.onGround) this.velocity.y = 0;
@@ -87,5 +93,4 @@ export default class Player {
     // gravity
     this.velocity.y -= gravity;
   }
-
 }

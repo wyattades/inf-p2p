@@ -1,7 +1,8 @@
 import * as THREE from 'three';
+
 import { CHUNK_SEGMENTS, SEGMENT_SIZE } from './constants';
 import * as options from './options';
-
+import createTerrainBody from './terrain/terrainBody';
 
 // const groundMaterial = new THREE.MeshLambertMaterial({
 //   vertexColors: THREE.FaceColors,
@@ -25,13 +26,16 @@ const groundMaterial = new THREE.MeshPhongMaterial({
 //   },
 // });
 
-const groundRayCaster = new THREE.Raycaster(new THREE.Vector3(0, 10000, 0), new THREE.Vector3(0, -1, 0));
+const groundRayCaster = new THREE.Raycaster(
+  new THREE.Vector3(0, 1000, 0),
+  new THREE.Vector3(0, -1, 0),
+);
 
 export default class Chunk {
-
   static SIZE = CHUNK_SEGMENTS * SEGMENT_SIZE;
 
-  constructor(x, z) {
+  constructor(scene, x, z) {
+    this.scene = scene;
     this.x = x;
     this.z = z;
     this.mesh = null;
@@ -39,16 +43,29 @@ export default class Chunk {
   }
 
   getHeightAt(x, z) {
-    if (!this.mesh)
-      return 0;
+    if (!this.mesh) return 0;
+
+    setTimeout(() => {
+      groundRayCaster.ray.origin.set(x, 1000, z);
+      // groundRayCaster.set(groundRayCaster.ray.origin, groundRayCaster.ray.direction);
+
+      // const objects = this.scene.children;
+      const inter = groundRayCaster.intersectObject(this.mesh);
+      console.log('later', this.mesh, groundRayCaster, inter);
+    }, 500);
+
+    // this.mesh.geometry.computeBoundingBox();
+    // this.mesh.geometry.computeBoundingSphere();
 
     // Slower than the below method, but it actually works...
-    groundRayCaster.ray.origin.x = x;
-    groundRayCaster.ray.origin.z = z;
+    groundRayCaster.ray.origin.set(x, 1000, z);
+    // groundRayCaster.set(groundRayCaster.ray.origin, groundRayCaster.ray.direction);
+
+    // const objects = this.scene.children;
     const inter = groundRayCaster.intersectObject(this.mesh);
-    if (inter && inter.length)
-      return inter[0].point.y;
-      
+    console.log(this.mesh, groundRayCaster, inter);
+    if (inter && inter.length) return inter[0].point.y;
+
     return 0;
 
     // x -= this.x * Chunk.SIZE;
@@ -80,17 +97,61 @@ export default class Chunk {
     // return y || 0.0;
   }
 
-  setTerrain(attr) {
+  enablePhysics() {
+    const { array: terrain, count } = this.mesh.geometry.getAttribute(
+      'position',
+    );
 
+    const heightData = [];
+    const lastRow = [];
+
+    for (
+      let i = 0, p = 0, i6 = 0;
+      i < count;
+      i++, p += 3, i6 = i6 === 5 ? 0 : i6 + 1
+    ) {
+      if (i6 === 0 || (i6 === 2 && terrain[p] === CHUNK_SEGMENTS)) {
+        heightData.push(terrain[p + 1]);
+      }
+      if (i6 === 1 && terrain[p + 2] === CHUNK_SEGMENTS)
+        lastRow.push(terrain[p + 1]);
+    }
+
+    heightData.push(...lastRow, terrain[(count - 2) * 3 + 1]);
+
+    this.terrainBody = createTerrainBody(
+      heightData,
+      new THREE.Vector3(
+        (this.x + 0.5) * Chunk.SIZE,
+        0,
+        (this.z + 0.5) * Chunk.SIZE,
+      ),
+    );
+  }
+
+  setTerrain(attr) {
     const geometry = new THREE.BufferGeometry();
     for (const key of ['position', 'color', 'uv', 'normal']) {
       const { array, itemSize, normalized } = attr[key];
-      geometry.addAttribute(key, new THREE.BufferAttribute(array, itemSize, normalized));
+      geometry.addAttribute(
+        key,
+        new THREE.BufferAttribute(array, itemSize, normalized),
+      );
     }
 
     this.mesh = new THREE.Mesh(geometry, groundMaterial.clone());
-    this.mesh.position.set((this.x + 0.5) * Chunk.SIZE, 0, (this.z + 0.5) * Chunk.SIZE);
+    this.mesh.position.set(
+      (this.x + 0.5) * Chunk.SIZE,
+      0,
+      (this.z + 0.5) * Chunk.SIZE,
+    );
     this.mesh.castShadow = this.mesh.receiveShadow = options.get('shadows');
+
+    this.scene.add(this.mesh);
   }
 
+  dispose() {
+    this.scene.remove(this.mesh);
+    if (this.terrainBody) this.terrainBody.dispose();
+  }
 }

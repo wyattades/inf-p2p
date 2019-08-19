@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import * as options from './options';
 import * as GameState from './GameState';
 
-
 // TODO gamepad support, cars???
 
 const DEFAULT_KEYBINDS = {
@@ -10,17 +9,17 @@ const DEFAULT_KEYBINDS = {
   strafeLeft: 65, // a
   backward: 83, // s
   strafeRight: 68, // d
-  cameraUp: 38, // ARROW_UP
-  cameraDown: 40, // ARROW_DOWN
-  cameraLeft: 37, // ARROW_LEFT
-  cameraRight: 39, // ARROW_RIGHT
+  // cameraUp: 38, // ARROW_UP
+  // cameraDown: 40, // ARROW_DOWN
+  // cameraLeft: 37, // ARROW_LEFT
+  // cameraRight: 39, // ARROW_RIGHT
   jump: 32, // SPACE
   toggleMenu: 27, // ESC
   toggleInfo: 73, // i
+  flipCar: 70,
 };
 
 export default class Controls {
-
   constructor(game) {
     this.game = game;
 
@@ -30,7 +29,7 @@ export default class Controls {
 
     // TODO save in localStorage
     this.keybinds = {};
-    
+
     this.keystate = {};
     for (const bindName in DEFAULT_KEYBINDS) {
       const key = DEFAULT_KEYBINDS[bindName];
@@ -52,13 +51,23 @@ export default class Controls {
 
     // Clear controls when leaving window
     window.addEventListener('blur', this.onBlur, false);
+    document.addEventListener(
+      'visibilitychange',
+      this.onVisibilityChange,
+      false,
+    );
 
-    this.canvas.requestPointerLock = this.canvas.requestPointerLock || this.canvas.mozRequestPointerLock;
-    document.exitPointerLock = document.exitPointerLock || document.mozExitPointerLock;
+    this.canvas.requestPointerLock =
+      this.canvas.requestPointerLock || this.canvas.mozRequestPointerLock;
+    document.exitPointerLock =
+      document.exitPointerLock || document.mozExitPointerLock;
     if ('onpointerlockchange' in document) {
       document.addEventListener('pointerlockchange', this.onPointerLockChange);
     } else if ('onmozpointerlockchange' in document) {
-      document.addEventListener('mozpointerlockchange', this.onPointerLockChange);
+      document.addEventListener(
+        'mozpointerlockchange',
+        this.onPointerLockChange,
+      );
     }
   }
 
@@ -68,15 +77,20 @@ export default class Controls {
       const escaping = !document.pointerLockElement;
       if (playing && escaping) this.game.setState(GameState.PAUSED);
     });
-  }
+  };
+
+  onVisibilityChange = () => {
+    if (document.visibilityState !== 'visible')
+      this.game.setState(GameState.PAUSED);
+  };
 
   onBlur = () => {
     this.game.setState(GameState.PAUSED);
-  }
+  };
 
   onMousedown = () => {
     this.game.setState(GameState.PLAYING);
-  }
+  };
 
   onMousemove = (evt) => {
     if (this.game.state === GameState.PLAYING) {
@@ -91,7 +105,7 @@ export default class Controls {
         this.rotation.x = Math.PI / 2;
       }
     }
-  }
+  };
 
   onKeydown = (evt) => {
     const bindName = this.keybinds[evt.which];
@@ -100,7 +114,7 @@ export default class Controls {
       if (typeof bind === 'function') bind();
       else this.keystate[bindName] = true;
     }
-  }
+  };
 
   onKeyup = (evt) => {
     const bindName = this.keybinds[evt.which];
@@ -108,7 +122,7 @@ export default class Controls {
       const bind = this.keystate[bindName];
       if (typeof bind !== 'function') this.keystate[bindName] = false;
     }
-  }
+  };
 
   setKeyBind(bindName, key) {
     this.keybinds[bindName] = key;
@@ -131,13 +145,19 @@ export default class Controls {
     window.removeEventListener('blur', this.onBlur);
     window.removeEventListener('keydown', this.onKeydown);
     window.removeEventListener('keyup', this.onKeyup);
+    document.removeEventListener('visibilitychange', this.onVisibilityChange);
     this.canvas.removeEventListener('mousemove', this.onMousemove);
     this.canvas.removeEventListener('mousedown', this.onMousedown);
     if ('onpointerlockchange' in document) {
-      document.removeEventListener('pointerlockchange', this.onPointerLockChange);
+      document.removeEventListener(
+        'pointerlockchange',
+        this.onPointerLockChange,
+      );
     } else if ('onmozpointerlockchange' in document) {
-      document.removeEventListener('mozpointerlockchange', this.onPointerLockChange);
+      document.removeEventListener(
+        'mozpointerlockchange',
+        this.onPointerLockChange,
+      );
     }
   }
-
 }

@@ -1,4 +1,4 @@
-import { mean } from '../utils';
+import { mean } from '../utils/math';
 import { CHUNK_SEGMENTS } from '../constants';
 
 

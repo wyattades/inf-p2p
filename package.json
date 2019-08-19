@@ -7,27 +7,25 @@
     "dev": "NODE_ENV=development webpack-dev-server",
     "build": "NODE_ENV=production webpack",
     "deploy": "gh-pages -d ./dist",
-    "build-deploy": "npm run build && npm run deploy",
-    "postinstall": "node utils/treeShakeThreeJs.js"
+    "build-deploy": "npm run build && npm run deploy"
   },
   "dependencies": {
     "bezier-easing": "^2.1.0",
-    "dexie": "^2.0.4",
+    "idb": "^4.0.4",
     "mainloop.js": "^1.0.4",
-    "seedrandom": "^2.4.3",
-    "simple-peer": "^9.1.2",
+    "raw-loader": "^3.1.0",
+    "seedrandom": "^3.0.3",
+    "simple-peer": "^9.5.0",
     "simplex-noise": "^2.4.0",
-    "three": "^0.95.0"
+    "three": "^0.107.0"
   },
   "devDependencies": {
-    "babel-eslint": "^8.2.6",
+    "babel-eslint": "^10.0.2",
     "benchmark": "^2.1.4",
-    "eslint": "^5.3.0",
-    "eslint-config-airbnb": "^17.0.0",
-    "eslint-plugin-import": "^2.13.0",
-    "eslint-plugin-jsx-a11y": "^6.1.1",
-    "eslint-plugin-react": "^7.10.0",
-    "gh-pages": "^1.2.0",
-    "webpack-boiler": "0.1.10"
+    "eslint": "^6.1.0",
+    "eslint-config-airbnb": "^18.0.1",
+    "eslint-plugin-import": "^2.18.2",
+    "gh-pages": "^2.1.1",
+    "webpack-boiler": "0.4.1"
   }
 }

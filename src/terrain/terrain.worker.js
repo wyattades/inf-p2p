@@ -8,7 +8,6 @@ import { generateHeightMap, generateNoiseMap } from './terrainGenerator';
 import colorMap from './colorMap';
 import { SEGMENT_SIZE, CHUNK_SEGMENTS } from '../constants';
 
-
 // TODO optimize geometry creation by using BufferPlaneGeometry
 // TODO reduce cached data
 
@@ -24,7 +23,7 @@ PLANE_GEOM.rotateX(-Math.PI / 2);
 
 const generateChunk = (x, z) => {
   let terrain = generateNoiseMap(x, z);
-  
+
   const colors = colorMap(terrain);
 
   terrain = generateHeightMap(terrain);
@@ -47,28 +46,52 @@ const generateChunk = (x, z) => {
   return bufferGeom.attributes;
 };
 
-const loadChunk = ({ x, z }) => {
+const loadChunk = async ({ x, z }) => {
   // Attempt to load from cache
-  mapCache.loadChunk(x, z)
-  .then((chunkData) => {
-    if (!chunkData) {
-      chunkData = generateChunk(x, z);
-      return mapCache.saveChunk(x, z, chunkData).then(() => chunkData);
-    } else return chunkData;
-  })
-  .then((attributes) => {
-    const { position, color, uv, normal } = attributes;
+  let chunkData;
+  try {
+    chunkData = await mapCache.loadChunk(x, z);
+  } catch (err) {
+    console.warn('loadChunk', err);
+  }
 
-    self.postMessage({ cmd: 'terrain', x, z, attributes }, [
-      position.array.buffer, color.array.buffer, uv.array.buffer, normal.array.buffer,
-    ]);
-  })
-  .catch(console.error);
+  if (!chunkData) {
+    chunkData = generateChunk(x, z);
+    try {
+      await mapCache.saveChunk(x, z, chunkData);
+    } catch (err) {
+      console.warn('saveChunk', err);
+    }
+  }
+
+  const { position, color, uv, normal } = chunkData;
+
+  self.postMessage({ cmd: 'terrain', x, z, attributes: chunkData }, [
+    position.array.buffer,
+    color.array.buffer,
+    uv.array.buffer,
+    normal.array.buffer,
+  ]);
 };
+
+// const loadChunkRange = async ({ x1, x2, z1, z2 }) => {
+  // for (let x = x1; x <= x2; x++) {
+  //   for (let z = z1; z <= z2; z++) {
+  //     loadChunk({ x, z });
+  //   }
+  // }
+//   console.log(await mapCache.loadChunkRange({ x1, x2, z1, z2 }));
+// };
 
 self.onmessage = ({ data }) => {
   switch (data.cmd) {
-    case 'loadChunk': loadChunk(data); break;
-    case 'clearCache': mapCache.clear();
+    // case 'loadChunkRange':
+    //   loadChunkRange(data);
+    //   break;
+    case 'loadChunk':
+      loadChunk(data);
+      break;
+    case 'clearCache':
+      mapCache.clear().catch((err) => console.warn('clearCache', err));
   }
 };
