@@ -1,0 +1,28 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["es6", "dom"],
+    "typeRoots": ["./node_modules/@types"],
+    "target": "es5",
+    "jsx": "preserve",
+    "noEmit": false,
+    "allowJs": true,
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "*": ["./*", "./node_modules/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
+  "exclude": [
+    "babel.config.js",
+    "node_modules",
+    "dist",
+    ".netlify",
+    "cypress",
+    "public",
+    "functions",
+    "scripts",
+    ".next"
+  ]
+}

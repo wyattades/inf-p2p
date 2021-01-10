@@ -86,6 +86,5 @@ export default class Car extends Player {
 
     // gravity
     this.velocity.y -= gravity;
-    
   }
 }

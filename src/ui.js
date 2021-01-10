@@ -1,6 +1,5 @@
 import * as options from './options';
 
-
 const $info = document.getElementById('info');
 const $menu = document.getElementById('menu');
 

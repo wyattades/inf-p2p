@@ -31,7 +31,7 @@ const AmmoDebugConstants = {
  * @param {Ammo.btCollisionWorld} world
  * @param {object} [options]
  */
-const AmmoDebugDrawer = function(scene, world, options) {
+const AmmoDebugDrawer = function (scene, world, options) {
   this.scene = scene;
   this.world = world;
   options = options || {};
@@ -81,21 +81,21 @@ const AmmoDebugDrawer = function(scene, world, options) {
   this.world.setDebugDrawer(this.debugDrawer);
 };
 
-AmmoDebugDrawer.prototype = function() {
+AmmoDebugDrawer.prototype = function () {
   return this.debugDrawer;
 };
 
-AmmoDebugDrawer.prototype.enable = function() {
+AmmoDebugDrawer.prototype.enable = function () {
   this.enabled = true;
   this.scene.add(this.mesh);
 };
 
-AmmoDebugDrawer.prototype.disable = function() {
+AmmoDebugDrawer.prototype.disable = function () {
   this.enabled = false;
   this.scene.remove(this.mesh);
 };
 
-AmmoDebugDrawer.prototype.update = function() {
+AmmoDebugDrawer.prototype.update = function () {
   if (!this.enabled) {
     return;
   }
@@ -111,7 +111,7 @@ AmmoDebugDrawer.prototype.update = function() {
   this.geometry.setDrawRange(0, this.index);
 };
 
-AmmoDebugDrawer.prototype.drawLine = function(from, to, color) {
+AmmoDebugDrawer.prototype.drawLine = function (from, to, color) {
   const heap = Ammo.HEAPF32;
   const r = heap[(color + 0) / 4];
   const g = heap[(color + 4) / 4];
@@ -131,7 +131,7 @@ AmmoDebugDrawer.prototype.drawLine = function(from, to, color) {
 };
 
 // TODO: figure out how to make lifeTime work
-AmmoDebugDrawer.prototype.drawContactPoint = function(
+AmmoDebugDrawer.prototype.drawContactPoint = function (
   pointOnB,
   normalOnB,
   distance,
@@ -156,7 +156,7 @@ AmmoDebugDrawer.prototype.drawContactPoint = function(
   this.geometry.attributes.color.setXYZ(this.index++, r, g, b);
 };
 
-AmmoDebugDrawer.prototype.reportErrorWarning = function(warningString) {
+AmmoDebugDrawer.prototype.reportErrorWarning = function (warningString) {
   if (Ammo.hasOwnProperty('Pointer_stringify')) {
     console.warn(Ammo.Pointer_stringify(warningString));
   } else if (!this.warnedOnce) {
@@ -167,16 +167,16 @@ AmmoDebugDrawer.prototype.reportErrorWarning = function(warningString) {
   }
 };
 
-AmmoDebugDrawer.prototype.draw3dText = function(location, textString) {
+AmmoDebugDrawer.prototype.draw3dText = function (location, textString) {
   // TODO
   console.warn('TODO: draw3dText');
 };
 
-AmmoDebugDrawer.prototype.setDebugMode = function(debugMode) {
+AmmoDebugDrawer.prototype.setDebugMode = function (debugMode) {
   this.debugDrawMode = debugMode;
 };
 
-AmmoDebugDrawer.prototype.getDebugMode = function() {
+AmmoDebugDrawer.prototype.getDebugMode = function () {
   return this.debugDrawMode;
 };
 

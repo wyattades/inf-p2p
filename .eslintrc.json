@@ -1,58 +1,91 @@
 {
-  "parser": "babel-eslint",
-  "extends": "airbnb",
-  "plugins": ["import"],
-  "env": {
-    "browser": true,
-    "node": true
+  "parser": "@babel/eslint-parser",
+  "extends": [
+    "eslint:recommended",
+    "plugin:import/typescript",
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended",
+    "airbnb",
+    "prettier",
+    "prettier/react",
+    "./.eslintrc.rules.json"
+  ],
+  "plugins": ["prettier", "react", "react-hooks", "jsx-a11y", "import"],
+  "env": { "browser": true, "es6": true },
+  "parserOptions": {
+    "sourceType": "module"
   },
-  "rules": {
-    "one-var-declaration-per-line": 0,
-    "no-multi-assign": 0,
-    "default-case": 0,
-    "no-unused-prop-types": 0,
-    "nonblock-statement-body-position": 0,
-    "lines-between-class-members": 0,
-    "quotes": 0,
-    "prefer-promise-reject-errors": 0,
-    "curly": 0,
-    "prefer-destructuring": 0,
-    "no-multi-str": 0,
-    "no-cond-assign": 0,
-    "no-throw-literal": 0,
-    "object-curly-newline": 0,
-    "object-property-newline": 0,
-    "guard-for-in": 0,
-    "no-bitwise": 0,
-    "import/prefer-default-export": 0,
-    "arrow-parens": 0,
-    "global-require": 0,
-    "import/newline-after-import": 0,
-    "no-underscore-dangle": 0,
-    "indent": 0,
-    "array-bracket-spacing": 0,
-    "padded-blocks": 0,
-    "one-var": 0,
-    "no-param-reassign": 0,
-    "max-len": [2, { "code": 120 }],
-    "no-console": 0,
-    "no-continue": 0,
-    "no-trailing-spaces": [
-      2,
-      { "skipBlankLines": true, "ignoreComments": false }
-    ],
-    "import/no-mutable-exports": 0,
-    "no-restricted-syntax": 0,
-    "no-case-declarations": 0,
-    "camelcase": 0,
-    "no-plusplus": 0,
-    "no-class-assign": 0,
-    "prefer-const": 1,
-    "no-else-return": 0,
-    "no-unused-expressions": 1,
-    "no-unused-vars": 1,
-    "no-confusing-arrow": 0,
-    "no-prototype-builtins": 0,
-    "linebreak-style": 0
-  }
+  "settings": {
+    "import/resolver": {
+      "typescript": {
+        "project": "./tsconfig.json"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "files": ["./webpack.config.js"],
+      "env": { "node": true },
+      "rules": {
+        "import/no-extraneous-dependencies": [
+          2,
+          {
+            "devDependencies": true,
+            "optionalDependencies": false,
+            "peerDependencies": false
+          }
+        ]
+      }
+    },
+    {
+      "files": ["*.{ts,tsx}"],
+      "extends": [
+        "eslint:recommended",
+        "plugin:import/typescript",
+        "plugin:@typescript-eslint/recommended",
+        "plugin:react/recommended",
+        "plugin:react-hooks/recommended",
+        "airbnb",
+        "prettier",
+        "prettier/react",
+        "prettier/@typescript-eslint",
+        "./.eslintrc.rules.json"
+      ],
+      "parser": "@typescript-eslint/parser",
+      "parserOptions": {
+        "project": ["./tsconfig.json", "./functions/tsconfig.json"]
+      },
+      "plugins": [
+        "@typescript-eslint",
+        "prettier",
+        "react",
+        "react-hooks",
+        "jsx-a11y",
+        "import"
+      ],
+      "rules": {
+        "@typescript-eslint/no-non-null-assertion": 0,
+        "@typescript-eslint/explicit-function-return-type": 0,
+        "@typescript-eslint/explicit-module-boundary-types": 0,
+        "@typescript-eslint/explicit-member-accessibility": [
+          2,
+          { "accessibility": "no-public" }
+        ],
+        "@typescript-eslint/no-explicit-any": 0,
+        "@typescript-eslint/no-parameter-properties": [
+          2,
+          { "allows": ["readonly"] }
+        ],
+        "@typescript-eslint/no-unused-vars": [
+          1,
+          {
+            "argsIgnorePattern": "^_",
+            "varsIgnorePattern": "^_"
+          }
+        ],
+        "@typescript-eslint/no-restricted-syntax": 0,
+        "@typescript-eslint/camelcase": 0
+      }
+    }
+  ]
 }

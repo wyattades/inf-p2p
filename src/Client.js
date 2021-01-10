@@ -3,12 +3,20 @@
 import Peer from 'simple-peer';
 import { EventEmitter } from 'events';
 
-
 const $p2p = document.getElementById('p2p');
 const $text = $p2p.querySelector('textarea');
 
 const encodeUpdate = ({ position, velocity, rotation }) => {
-  const data = [ position.x, position.y, position.z, velocity.x, velocity.y, velocity.z, rotation.x, rotation.y ];
+  const data = [
+    position.x,
+    position.y,
+    position.z,
+    velocity.x,
+    velocity.y,
+    velocity.z,
+    rotation.x,
+    rotation.y,
+  ];
   return data.join(',');
 };
 
@@ -33,7 +41,6 @@ const decodeUpdate = (dataString) => {
 };
 
 export default class Client extends EventEmitter {
-
   constructor(player) {
     super();
 
@@ -51,16 +58,17 @@ export default class Client extends EventEmitter {
   onSubmit = (e) => {
     e.preventDefault();
     const val = $text.value.trim();
-    
+
     if (!val) this.initiator = true;
 
     this.createPeer();
-    
-    if (val) this.p.signal({
-      type: 'offer',
-      sdp: window.atob(val),
-    });
-  }
+
+    if (val)
+      this.p.signal({
+        type: 'offer',
+        sdp: window.atob(val),
+      });
+  };
 
   // init() {
   //   const socket = io();
@@ -73,12 +81,12 @@ export default class Client extends EventEmitter {
   //   }, () => { // finished connected
   //     // this.p2p.emit('peer-obj', `Hello there. I am ${this.p2p.peerId}`);
   //   });
-    
+
   //   this.p2p.on('ready', () => {
   //     this.p2p.usePeerConnection = true;
   //     this.p2p.emit('peer-obj', { peerId: this.p2p.peerId });
   //   });
-    
+
   //   // this event will be triggered over the socket transport
   //   // until `usePeerConnection` is set to `true`
   //   this.p2p.on('peer-msg', (data) => {
@@ -93,9 +101,8 @@ export default class Client extends EventEmitter {
   // }
 
   createPeer() {
-
     $p2p.removeEventListener('submit', this.onSubmit);
-    
+
     this.p = new Peer({
       initiator: this.initiator,
     });
@@ -149,5 +156,4 @@ export default class Client extends EventEmitter {
 
     if (this.p) this.p.destroy();
   }
-
 }
