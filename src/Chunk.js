@@ -34,25 +34,25 @@ const groundRayCaster = new THREE.Raycaster(
 export default class Chunk {
   static SIZE = CHUNK_SEGMENTS * SEGMENT_SIZE;
 
-  constructor(scene, x, z) {
-    this.scene = scene;
+  constructor(group, x, z) {
+    this.group = group;
     this.x = x;
     this.z = z;
+    // this.lod = 1;
     this.mesh = null;
-    this.isChunk = true;
   }
 
   getHeightAt(x, z) {
     if (!this.mesh) return 0;
 
-    setTimeout(() => {
-      groundRayCaster.ray.origin.set(x, 1000, z);
-      // groundRayCaster.set(groundRayCaster.ray.origin, groundRayCaster.ray.direction);
+    // setTimeout(() => {
+    //   groundRayCaster.ray.origin.set(x, 1000, z);
+    //   // groundRayCaster.set(groundRayCaster.ray.origin, groundRayCaster.ray.direction);
 
-      // const objects = this.scene.children;
-      const inter = groundRayCaster.intersectObject(this.mesh);
-      console.log('later', this.mesh, groundRayCaster, inter);
-    }, 500);
+    //   // const objects = this.scene.children;
+    //   // const inter = groundRayCaster.intersectObject(this.mesh);
+    //   // console.log('later', this.mesh, groundRayCaster, inter);
+    // }, 500);
 
     // this.mesh.geometry.computeBoundingBox();
     // this.mesh.geometry.computeBoundingSphere();
@@ -63,7 +63,6 @@ export default class Chunk {
 
     // const objects = this.scene.children;
     const inter = groundRayCaster.intersectObject(this.mesh);
-    console.log(this.mesh, groundRayCaster, inter);
     if (inter && inter.length) return inter[0].point.y;
 
     return 0;
@@ -129,6 +128,12 @@ export default class Chunk {
     );
   }
 
+  // setLOD(lod) {
+  //   if (this.lod === lod) return;
+
+  //   this.mesh.geometry.dispose();
+  // }
+
   setTerrain(attr) {
     const geometry = new THREE.BufferGeometry();
     for (const key of ['position', 'color', 'uv', 'normal']) {
@@ -140,18 +145,34 @@ export default class Chunk {
     }
 
     this.mesh = new THREE.Mesh(geometry, groundMaterial.clone());
+    this.mesh.matrixAutoUpdate = false;
     this.mesh.position.set(
       (this.x + 0.5) * Chunk.SIZE,
       0,
       (this.z + 0.5) * Chunk.SIZE,
     );
+
+    this.mesh.updateMatrix();
+
     this.mesh.castShadow = this.mesh.receiveShadow = options.get('shadows');
 
-    this.scene.add(this.mesh);
+    this.group.add(this.mesh);
+
+    if (options.get('debug')) {
+      this.debugMesh = new THREE.LineSegments(
+        new THREE.EdgesGeometry(
+          new THREE.BoxGeometry(Chunk.SIZE, 512, Chunk.SIZE),
+        ),
+        new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 }),
+      );
+      this.debugMesh.position.copy(this.mesh.position);
+      this.group.add(this.debugMesh);
+    }
   }
 
   dispose() {
-    this.scene.remove(this.mesh);
+    this.group.remove(this.mesh);
+    if (this.debugMesh) this.group.remove(this.debugMesh);
     if (this.terrainBody) this.terrainBody.dispose();
   }
 }

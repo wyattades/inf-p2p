@@ -2,19 +2,18 @@ import * as THREE from 'three';
 import MainLoop from 'mainloop.js';
 
 import ChunkLoader from './ChunkLoader';
-import Chunk from './Chunk';
 import Controls from './Controls';
-// import Player from './objects/Player';
+import Player from './objects/Player';
 import * as ui from './ui';
 import * as options from './options';
-import Saver from './save';
 import Sky from './objects/Sky';
 import Vehicle from './objects/Vehicle';
 import * as GameState from './GameState';
 import Client from './Client';
-import { loadModel } from './models';
+import { loadModel } from './utils/models';
 import * as physics from './physics';
 import * as debug from './debug';
+import Saver from './Saver';
 
 const $game = document.getElementById('game');
 const $loader = document.getElementById('loader');
@@ -49,16 +48,13 @@ export default class Game {
     this.chunkLoader = new ChunkLoader(this.scene, options.get('renderDist'));
 
     this.controls = new Controls(this);
-    // this.player = new Player(this);
+    this.player = new Player(this);
+    this.saver = new Saver(this.player.position);
 
-    this.saver = new Saver();
-
-    this.player = this.vehicle = new Vehicle(
+    this.vehicle = new Vehicle(
       this.scene,
-      this.saver.values.position || new THREE.Vector3(0, 10, 0),
+      /* this.saver.pos || */ new THREE.Vector3(0, 10, 0),
     );
-
-    this.saver.setPlayer(this.player);
 
     this.client = new Client(this.player);
 
@@ -76,30 +72,29 @@ export default class Game {
   createScene() {
     this.scene = new THREE.Scene();
 
-    const hemiLight = new THREE.HemisphereLight(0x3284ff, 0xffc87f, 0.6);
-    hemiLight.position.set(0, 50, 0);
-    this.hemiLight = hemiLight;
-    this.scene.add(hemiLight);
+    // Lights
+
+    this.hemiLight = new THREE.HemisphereLight(0x3284ff, 0xffc87f, 0.7);
+    this.hemiLight.position.set(0, 50, 0);
+    this.scene.add(this.hemiLight);
 
     this.dirLight = new THREE.DirectionalLight(0xfff4e5, 1);
     this.dirLight.castShadow = options.get('shadows');
     this.scene.add(this.dirLight);
 
     // Fog
-    if (options.get('fog')) {
-      this.scene.fog = new THREE.FogExp2(0xe2f6ff, 0.002); // options.get('renderDist') * Chunk.SIZE);
-      // this.scene.fog = new THREE.Fog(0xffffff, 1, 1000); // options.get('renderDist') * Chunk.SIZE);
-      // this.renderer.setClearColor(fog.color, 0.5);
-    }
+    this.scene.fog = options.get('fog')
+      ? new THREE.FogExp2(0xe2f6ff, 0.007 / options.get('renderDist'))
+      : null;
 
+    // Sky box
     this.sky = new Sky();
-
     this.scene.add(this.sky);
   }
 
   createRenderer() {
     this.renderer = new THREE.WebGLRenderer({
-      antialias: options.get('antialias'),
+      antialias: !!options.get('antialias'),
       canvas: this.canvas,
     });
     this.renderer.shadowMap.enabled = options.get('shadows');
@@ -149,10 +144,8 @@ export default class Game {
     const heightAt = this.chunkLoader.getHeightAt(x, z);
     this.player.setPos(null, heightAt + 30, null);
 
-    console.log('getHeightAt', heightAt);
-
-    ui.set('chunkX', this.chunkLoader.playerChunk.x);
-    ui.set('chunkZ', this.chunkLoader.playerChunk.z);
+    ui.set('chunkX', this.chunkLoader.playerChunk.x.toString());
+    ui.set('chunkZ', this.chunkLoader.playerChunk.z.toString());
   }
 
   async start() {
@@ -168,11 +161,9 @@ export default class Game {
     this.controls.bindPress('toggleMenu', () => {
       if (this.state === GameState.PAUSED) {
         // TODO not working
-        setTimeout(
-          () =>
-            this.state === GameState.PAUSED && this.setState(GameState.PLAYING),
-          200,
-        );
+        setTimeout(() => {
+          if (this.state === GameState.PAUSED) this.setState(GameState.PLAYING);
+        }, 200);
       } else if (this.state === GameState.PLAYING) {
         this.setState(GameState.PAUSED);
       }
@@ -218,7 +209,7 @@ export default class Game {
         // Update game if options changed
         const changed = options.checkChanged();
         for (const key in changed) {
-          if (key === 'renderDist') {
+          if (key === 'renderDist' || key === 'debug') {
             this.reload();
             return;
           } else if (key === 'fog') {
@@ -258,7 +249,7 @@ export default class Game {
   };
 
   relativeCameraOffset = new THREE.Vector3(0, 7, -10);
-  cameraFollow(obj) {
+  cameraFollowVehicle(obj) {
     const cameraOffset = this.relativeCameraOffset
       .clone()
       .applyMatrix4(obj.matrixWorld);
@@ -272,6 +263,13 @@ export default class Game {
     this.camera.lookAt(lookAtPos);
   }
 
+  cameraFollowPlayer(obj) {
+    this.camera.position.copy(obj.position);
+    this.camera.rotation.set(0, 0, 0);
+    this.camera.rotateY(obj.rotation.y);
+    this.camera.rotateX(obj.rotation.x);
+  }
+
   updateEnd = (fps, panic) => {
     ui.set('FPS', fps);
 
@@ -283,10 +281,14 @@ export default class Game {
   };
 
   update = (delta) => {
+    delta = 1 / delta;
+
     this.tick++;
     this.time += 0.001;
 
     // Physics
+    // if (this.state === GameState.PLAYING)
+    this.player.updateControls(delta);
     this.player.update(delta);
     // this.vehicle.update(delta);
     physics.update(delta);
@@ -304,8 +306,8 @@ export default class Game {
     // this.camera.rotateY(this.player.rotation.y);
     // this.camera.rotateX(this.player.rotation.x);
 
-    // third person
-    this.cameraFollow(this.vehicle);
+    // third persons
+    this.cameraFollowPlayer(this.player);
 
     // Skybox follow player
     this.sky.position.set(this.player.position.x, 0, this.player.position.z);
@@ -317,8 +319,8 @@ export default class Game {
     );
 
     if (this.chunkLoader.updatePlayerChunk(chunkX, chunkZ)) {
-      ui.set('chunkX', chunkX);
-      ui.set('chunkZ', chunkZ);
+      ui.set('chunkX', chunkX.toString());
+      ui.set('chunkZ', chunkZ.toString());
     }
 
     // const chunkX = halfChunkX * 2;

@@ -1,12 +1,12 @@
-
 // Defaults
 const opt = {
   renderDist: 2,
   quality: 1.0,
   shadows: true,
-  mouseSensitivity: 3,
+  mouseSensitivity: 8,
   antialias: false,
   fog: true,
+  debug: false,
 };
 let changed = {};
 
@@ -17,7 +17,7 @@ const load = () => {
   } catch (_) {
     // Do nothing
   }
-  
+
   if (data && typeof data === 'object') {
     return data;
   } else {
@@ -26,14 +26,13 @@ const load = () => {
 };
 
 const save = () => {
-  localStorage.setItem('options', JSON.stringify(Object.assign({}, opt, changed)));
+  localStorage.setItem('options', JSON.stringify({ ...opt, ...changed }));
 };
 
 const loaded = load();
 for (const key in opt) {
   const val = loaded[key];
-  if (typeof val === typeof opt[key])
-    opt[key] = val;
+  if (typeof val === typeof opt[key]) opt[key] = val;
 }
 
 export const set = (key, val) => {
@@ -41,7 +40,7 @@ export const set = (key, val) => {
     console.error('Invalid option:', key);
     return;
   }
-  
+
   if (opt[key] === val) delete changed[key];
   else changed[key] = val;
 

@@ -1,4 +1,4 @@
-global.THREE = require('three');
+const THREE = (global.THREE = require('three'));
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
@@ -49,10 +49,7 @@ const parseNumber = (key, value) =>
 
   const input = path.resolve(args[0]);
   const output = input.replace(/\.\w+$/, '.json');
-  const loader = path
-    .parse(input)
-    .ext.substring(1)
-    .toUpperCase();
+  const loader = path.parse(input).ext.substring(1).toUpperCase();
 
   if (!/^(STL|OBJ)$/.test(loader)) throw 'Invalid loader: ' + loader;
 

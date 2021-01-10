@@ -4,7 +4,12 @@ import TerrainWorker from './terrain/terrain.worker';
 import Chunk from './Chunk';
 import { Subject } from './utils/async';
 
-const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+const DIRS = [
+  [1, 0],
+  [0, 1],
+  [-1, 0],
+  [0, -1],
+];
 
 export default class ChunkLoader {
   /** @type {Object<string, Chunk>} */
@@ -15,8 +20,8 @@ export default class ChunkLoader {
 
   static worldPosToChunk(x, z) {
     return {
-      x: Math[x > 0 ? 'floor' : 'ceil'](x / Chunk.SIZE),
-      z: Math[z > 0 ? 'floor' : 'ceil'](z / Chunk.SIZE),
+      x: Math.floor(x / Chunk.SIZE),
+      z: Math.floor(z / Chunk.SIZE),
     };
   }
 
@@ -99,14 +104,13 @@ export default class ChunkLoader {
 
     const deltaX = x - this.playerChunk.x,
       deltaZ = z - this.playerChunk.z;
+    const dirX = Math.sign(deltaX),
+      dirZ = Math.sign(deltaZ);
 
     // Edges
     if (deltaX) {
       for (let i = -this.renderDist; i <= this.renderDist; i++) {
-        const newX =
-          this.playerChunk.x +
-          (deltaX > 0 ? this.renderDist : -this.renderDist) +
-          deltaX;
+        const newX = this.playerChunk.x + dirX * this.renderDist + deltaX;
         const newZ = this.playerChunk.z + i;
         if (!(`${newX},${newZ}` in this.chunks))
           this._requestLoadChunk(newX, newZ);
@@ -115,10 +119,7 @@ export default class ChunkLoader {
     if (deltaZ) {
       for (let i = -this.renderDist; i <= this.renderDist; i++) {
         const newX = this.playerChunk.x + i;
-        const newZ =
-          this.playerChunk.z +
-          (deltaZ > 0 ? this.renderDist : -this.renderDist) +
-          deltaZ;
+        const newZ = this.playerChunk.z + dirZ * this.renderDist + deltaZ;
         if (!(`${newX},${newZ}` in this.chunks))
           this._requestLoadChunk(newX, newZ);
       }
@@ -126,14 +127,8 @@ export default class ChunkLoader {
 
     // Corners
     if (deltaX && deltaZ) {
-      const newX =
-        this.playerChunk.x +
-        (deltaX > 0 ? this.renderDist : -this.renderDist) +
-        deltaX;
-      const newZ =
-        this.playerChunk.z +
-        (deltaZ > 0 ? this.renderDist : -this.renderDist) +
-        deltaZ;
+      const newX = this.playerChunk.x + dirX * this.renderDist + deltaX;
+      const newZ = this.playerChunk.z + dirZ * this.renderDist + deltaZ;
       if (!(`${newX},${newZ}` in this.chunks))
         this._requestLoadChunk(newX, newZ);
     }
@@ -186,5 +181,9 @@ export default class ChunkLoader {
 
   unloadChunks() {
     for (const key in this.chunks) this.unloadChunk(key);
+  }
+
+  dispose() {
+    this.unloadChunks();
   }
 }
