@@ -7,12 +7,12 @@ import Player from './objects/Player';
 import * as ui from './ui';
 import * as options from './options';
 import Sky from './objects/Sky';
-import Vehicle from './objects/Vehicle';
+// import Vehicle from './objects/Vehicle';
 import * as GameState from './GameState';
 import Client from './Client';
 import { loadModel } from './utils/models';
-import * as physics from './physics';
-import * as debug from './debug';
+// import * as physics from './physics';
+// import * as debug from './debug';
 import Saver from './Saver';
 
 const $game = document.getElementById('game');
@@ -37,7 +37,7 @@ export default class Game {
 
     this.createScene();
     this.createRenderer();
-    physics.createWorld();
+    // physics.createWorld();
 
     // debug.enable(this.scene);
 
@@ -51,10 +51,10 @@ export default class Game {
     this.player = new Player(this);
     this.saver = new Saver(this.player.position);
 
-    this.vehicle = new Vehicle(
-      this.scene,
-      /* this.saver.pos || */ new THREE.Vector3(0, 10, 0),
-    );
+    // this.vehicle = new Vehicle(
+    //   this.scene,
+    //   /* this.saver.pos || */ new THREE.Vector3(0, 10, 0),
+    // );
 
     this.client = new Client(this.player);
 
@@ -168,9 +168,9 @@ export default class Game {
         this.setState(GameState.PAUSED);
       }
     });
-    this.controls.bindPress('flipCar', () => {
-      this.vehicle.flip();
-    });
+    // this.controls.bindPress('flipCar', () => {
+    //   this.vehicle.flip();
+    // });
     // loadModel('person')
     // .then((obj) => {
     //   obj.scale.setScalar(0.034);
@@ -181,7 +181,7 @@ export default class Game {
 
     this.client.init();
     this.client.once('connect', () => {
-      loadModel('person')
+      loadModel(import('src/models/person.json'))
         .then((obj) => {
           obj.scale.setScalar(0.034);
           obj.rotateX(-Math.PI / 2);
@@ -291,7 +291,7 @@ export default class Game {
     this.player.updateControls(delta);
     this.player.update(delta);
     // this.vehicle.update(delta);
-    physics.update(delta);
+    // physics.update(delta);
 
     if (this.tick % 5 === 0) {
       this.setTime(this.time);
@@ -333,7 +333,7 @@ export default class Game {
   };
 
   dispose() {
-    debug.disable();
+    // debug.disable();
     physics.dispose();
     this.saver.dispose();
     this.client.dispose();

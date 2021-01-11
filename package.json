@@ -4,20 +4,21 @@
   "scripts": {
     "test": "echo 'No tests configured!'; exit",
     "lint": "eslint src --ignore-pattern src/static",
-    "dev": "NODE_ENV=development webpack-dev-server",
+    "dev": "yarn && NODE_ENV=development webpack-dev-server",
     "build": "NODE_ENV=production webpack",
     "deploy": "gh-pages -d ./dist",
     "build-deploy": "npm run build && npm run deploy"
   },
   "dependencies": {
+    "ammo.js": "mozillareality/ammo.js#master",
     "bezier-easing": "^2.1.0",
-    "idb": "^4.0.4",
+    "idb": "^6.0.0",
     "mainloop.js": "^1.0.4",
-    "raw-loader": "^3.1.0",
-    "seedrandom": "^3.0.3",
-    "simple-peer": "^9.5.0",
+    "raw-loader": "^4.0.2",
+    "seedrandom": "^3.0.5",
+    "simple-peer": "^9.9.3",
     "simplex-noise": "^2.4.0",
-    "three": "^0.107.0"
+    "three": "^0.124.0"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.12.1",

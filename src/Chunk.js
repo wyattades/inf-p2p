@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 import { CHUNK_SEGMENTS, SEGMENT_SIZE } from './constants';
 import * as options from './options';
-import createTerrainBody from './terrain/terrainBody';
+// import createTerrainBody from './terrain/terrainBody';
 
 // const groundMaterial = new THREE.MeshLambertMaterial({
 //   vertexColors: THREE.FaceColors,
@@ -118,14 +118,14 @@ export default class Chunk {
 
     heightData.push(...lastRow, terrain[(count - 2) * 3 + 1]);
 
-    this.terrainBody = createTerrainBody(
-      heightData,
-      new THREE.Vector3(
-        (this.x + 0.5) * Chunk.SIZE,
-        0,
-        (this.z + 0.5) * Chunk.SIZE,
-      ),
-    );
+    // this.terrainBody = createTerrainBody(
+    //   heightData,
+    //   new THREE.Vector3(
+    //     (this.x + 0.5) * Chunk.SIZE,
+    //     0,
+    //     (this.z + 0.5) * Chunk.SIZE,
+    //   ),
+    // );
   }
 
   // setLOD(lod) {

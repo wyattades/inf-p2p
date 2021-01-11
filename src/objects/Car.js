@@ -1,6 +1,7 @@
-import { Vector3 } from 'three';
-import Player from './Player';
-import { loadModel } from '../models';
+import * as THREE from 'three';
+
+import { loadModel } from 'src/utils/models';
+import Player from 'src/objects/Player';
 
 class Wheel {
   static RADIUS = 1;
@@ -14,7 +15,7 @@ class Wheel {
     this.car = car;
     this.game = this.car.game;
 
-    this.offset = new Vector3(x, 0, z);
+    this.offset = new THREE.Vector3(x, 0, z);
     this.position = car.position.copy().add(this.offset);
   }
 
@@ -42,7 +43,7 @@ export default class Car extends Player {
       new Wheel(this, -3, -4),
     ];
 
-    loadModel('car')
+    loadModel(() => import('src/models/car.json'))
       .then((model) => {
         // model.scale.setScalar(0.034);
         // obj.rotateX(-Math.PI / 2);

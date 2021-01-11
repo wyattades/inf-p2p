@@ -1,7 +1,7 @@
 /* eslint-disable new-cap */
 import * as THREE from 'three';
 
-import { Ammo, physicsWorld } from '../physics';
+import { Ammo, getWorld } from '../physics';
 
 export const createBox = (pos, quat, w, l, h, mass, friction) => {
   const material = mass > 0 ? materialDynamic : materialStatic;
@@ -39,7 +39,7 @@ export const createBox = (pos, quat, w, l, h, mass, friction) => {
   // body.setRestitution(.9);
   // body.setDamping(0.2, 0.2);
 
-  physicsWorld.addRigidBody(body);
+  getWorld().physicsWorld.addRigidBody(body);
 
   if (mass > 0) {
     body.setActivationState(DISABLE_DEACTIVATION);

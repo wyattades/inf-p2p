@@ -1,3 +1,5 @@
+const path = require('path');
+
 const config = (module.exports = require('webpack-boiler')({
   pages: [
     {
@@ -6,7 +8,6 @@ const config = (module.exports = require('webpack-boiler')({
       meta: {
         description: '<Temporary description>',
       },
-      headElements: [{ tag: 'script', src: '/ammo.js', 'data-test': '1' }],
     },
   ],
   basename: 'inf-p2p',
@@ -17,6 +18,5 @@ config.module.rules.push({
   loader: 'raw-loader',
 });
 
-config.externals = {
-  ammo: 'Ammo',
-};
+for (const dir of ['src'])
+  config.resolve.alias[dir] = path.resolve(__dirname, dir);

@@ -1,5 +1,13 @@
-/* eslint-disable new-cap */
-import ammo from 'ammo';
+// import Ammo from 'ammo.js/builds/ammo.wasm.js';
+// import AmmoWasm from 'ammo.js/builds/ammo.wasm.wasm';
+// const AmmoModule = Ammo.bind(undefined, {
+//   locateFile(path) {
+//     if (path.endsWith('.wasm')) {
+//       return AmmoWasm;
+//     }
+//     return path;
+//   },
+// });
 
 const importWasm = (url) =>
   WebAssembly.instantiateStreaming(fetch(url)).then(
@@ -7,6 +15,8 @@ const importWasm = (url) =>
   );
 
 const GRAVITY = -9.82;
+
+const ammo = () => ({}); // TEMP
 
 // let Ammo;
 export const Ammo = ammo();

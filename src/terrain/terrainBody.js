@@ -1,7 +1,7 @@
 /* eslint-disable new-cap */
 import { Ammo, getWorld } from '../physics';
 import { SEGMENT_SIZE, CHUNK_SEGMENTS } from '../constants';
-import * as debug from '../debug';
+// import * as debug from '../debug';
 
 const createTerrainShape = ({ heightData, minHeight, maxHeight }) => {
   const size = CHUNK_SEGMENTS;
@@ -104,7 +104,7 @@ export default (heightData, position) => {
 
   getWorld().addRigidBody(groundBody);
 
-  if (debug.isEnabled()) debug.update();
+  // if (debug.isEnabled()) debug.update();
 
   return {
     dispose() {

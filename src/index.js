@@ -1,9 +1,9 @@
-import './styles/style.scss';
 import * as options from './options';
 import * as GameState from './GameState';
-let Game = require('./Game').default;
 
-require.context('./static', true);
+import './styles/style.scss';
+
+let Game = require('./Game').default;
 
 let game = new Game();
 game.start();

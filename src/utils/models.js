@@ -1,10 +1,7 @@
 import * as THREE from 'three';
 
-export const loadModel = (name) =>
-  window
-    .fetch(`models/${name}.json`)
-    .then((res) => res.json())
-    .then((res) => {
-      const obj = new THREE.ObjectLoader().parse(res);
-      return obj;
-    });
+export const loadModel = async (importer) => {
+  const json = await importer;
+  const obj = new THREE.ObjectLoader().parse(json);
+  return obj;
+};
