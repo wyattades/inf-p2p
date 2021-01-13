@@ -21,6 +21,8 @@ document.querySelectorAll('#options [name]').forEach((el) => {
   };
 });
 document.getElementById('resume').onclick = () => window.cheat.resume();
+document.getElementById('clearMapCache').onclick = () =>
+  window.cheat.clearMapCache();
 
 const vals = {
   chunkX: null,
@@ -29,6 +31,7 @@ const vals = {
   y: null,
   z: null,
   FPS: null,
+  tick: null,
 };
 
 for (const key in vals) {

@@ -1,6 +1,19 @@
 {
-  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
   "compilerOptions": {
+    "module": "esNext",
+    "moduleResolution": "node",
+    "declaration": false,
+    "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "downlevelIteration": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "strict": true,
+    "checkJs": false,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
     "lib": ["es6", "dom"],
     "typeRoots": ["./node_modules/@types"],
     "target": "es5",
@@ -13,16 +26,6 @@
       "*": ["./*", "./node_modules/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
-  "exclude": [
-    "babel.config.js",
-    "node_modules",
-    "dist",
-    ".netlify",
-    "cypress",
-    "public",
-    "functions",
-    "scripts",
-    ".next"
-  ]
+  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
+  "exclude": ["babel.config.js", "node_modules", "dist"]
 }

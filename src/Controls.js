@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+
 import * as options from './options';
 import * as GameState from './GameState';
 
@@ -96,8 +97,15 @@ export default class Controls {
   onMousemove = (evt) => {
     if (this.game.state === GameState.PLAYING) {
       const sensitivity = options.get('mouseSensitivity') / 3000;
-      this.rotation.x -= evt.movementY * sensitivity;
-      this.rotation.y -= evt.movementX * sensitivity;
+
+      let mx = evt.movementX,
+        my = evt.movementY;
+
+      if (my === 1 && mx === 0) my = 0; // fixes mouse moving on its own on Windows 10 Firefox
+
+      this.rotation.x -= my * sensitivity;
+      this.rotation.y -= mx * sensitivity;
+
       // Constrain viewing angle
       if (this.rotation.x < -Math.PI / 2) {
         this.rotation.x = -Math.PI / 2;

@@ -1,5 +1,5 @@
-
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -11,7 +11,9 @@ html {
   font-family: monospace;
 }
 
-p, button, label {
+p,
+button,
+label {
   border: none;
   outline: none;
   background: none;
@@ -23,21 +25,25 @@ p, button, label {
 }
 
 .hidden {
-  display: none !important;   
+  display: none !important;
+}
+
+.asdasd {
+  color: #c329c9;
 }
 
 #menu {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  position: fixed; 
-  left: 0; 
+  position: fixed;
+  left: 0;
   right: 0;
   top: 0;
-  bottom: 0; 
-  margin: auto; 
+  bottom: 0;
+  margin: auto;
   width: 400px;
-  height: 300px;
+  height: 340px;
   padding: 16px;
   color: white;
   background-color: rgba(124, 124, 124, 0.7);
@@ -55,7 +61,7 @@ p, button, label {
   p {
     color: rgba(255, 255, 255, 0.6);
   }
-  input[type=range] {
+  input[type='range'] {
     vertical-align: middle;
     margin: 0 8px;
   }
@@ -94,16 +100,26 @@ p, button, label {
       display: inline-block;
       width: 0;
       overflow-x: visible;
-      animation: dotty steps(1,end) 1s infinite;
+      animation: dotty steps(1, end) 1s infinite;
       content: '';
     }
   }
 }
 
 @keyframes dotty {
-    0%   { content: ''; }
-    25%  { content: '.'; }
-    50%  { content: '..'; }
-    75%  { content: '...'; }
-    100% { content: ''; }
+  0% {
+    content: '';
+  }
+  25% {
+    content: '.';
+  }
+  50% {
+    content: '..';
+  }
+  75% {
+    content: '...';
+  }
+  100% {
+    content: '';
+  }
 }

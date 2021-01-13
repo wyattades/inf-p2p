@@ -14,13 +14,15 @@ import { loadModel } from './utils/models';
 // import * as physics from './physics';
 // import * as debug from './debug';
 import Saver from './Saver';
+import Box from './objects/Box';
+import physics, { loadPhysicsModule } from './physics';
 
 const $game = document.getElementById('game');
 const $loader = document.getElementById('loader');
 
 export default class Game {
-  constructor() {
-    this.init();
+  async preload() {
+    await loadPhysicsModule();
   }
 
   init() {
@@ -37,7 +39,8 @@ export default class Game {
 
     this.createScene();
     this.createRenderer();
-    // physics.createWorld();
+
+    physics.init();
 
     // debug.enable(this.scene);
 
@@ -49,12 +52,17 @@ export default class Game {
 
     this.controls = new Controls(this);
     this.player = new Player(this);
-    this.saver = new Saver(this.player.position);
+    this.saver = new Saver(
+      () => this.player.position,
+      (next) => this.player.setPos(next.x, next.y, next.z),
+    );
 
     // this.vehicle = new Vehicle(
     //   this.scene,
     //   /* this.saver.pos || */ new THREE.Vector3(0, 10, 0),
     // );
+    this.objectGroup = new THREE.Group();
+    this.scene.add(this.objectGroup);
 
     this.client = new Client(this.player);
 
@@ -142,7 +150,12 @@ export default class Game {
     await this.chunkLoader.loadInitial(x, z);
 
     const heightAt = this.chunkLoader.getHeightAt(x, z);
-    this.player.setPos(null, heightAt + 30, null);
+    this.player.setPos(
+      ...this.player.position
+        .clone()
+        .setY(heightAt + 30)
+        .toArray(),
+    );
 
     ui.set('chunkX', this.chunkLoader.playerChunk.x.toString());
     ui.set('chunkZ', this.chunkLoader.playerChunk.z.toString());
@@ -248,6 +261,18 @@ export default class Game {
     this.enemy.rotation.z = data.rotation.y + Math.PI;
   };
 
+  spawnRandomBox() {
+    const pos = this.player.position.clone();
+
+    const angle = Math.random() * Math.PI * 2;
+    pos.x += Math.cos(angle) * 35;
+    pos.y += 10;
+    pos.z += Math.sin(angle) * 35;
+
+    const box = new Box(pos);
+    this.objectGroup.add(box.mesh);
+  }
+
   relativeCameraOffset = new THREE.Vector3(0, 7, -10);
   cameraFollowVehicle(obj) {
     const cameraOffset = this.relativeCameraOffset
@@ -263,11 +288,9 @@ export default class Game {
     this.camera.lookAt(lookAtPos);
   }
 
-  cameraFollowPlayer(obj) {
-    this.camera.position.copy(obj.position);
-    this.camera.rotation.set(0, 0, 0);
-    this.camera.rotateY(obj.rotation.y);
-    this.camera.rotateX(obj.rotation.x);
+  cameraFollowPlayer(player) {
+    this.camera.position.copy(player.position);
+    this.camera.rotation.copy(player.obj.rotation);
   }
 
   updateEnd = (fps, panic) => {
@@ -291,7 +314,8 @@ export default class Game {
     this.player.updateControls(delta);
     this.player.update(delta);
     // this.vehicle.update(delta);
-    // physics.update(delta);
+    physics.update(delta, this.tick);
+    for (const obj of this.objectGroup.children) obj.update(delta);
 
     if (this.tick % 5 === 0) {
       this.setTime(this.time);
@@ -299,14 +323,14 @@ export default class Game {
       ui.set('x', this.player.position.x);
       ui.set('y', this.player.position.y);
       ui.set('z', this.player.position.z);
+
+      ui.set('tick', this.tick.toString());
     }
 
-    // this.camera.position.copy(this.player.position);
-    // this.camera.rotation.set(0, 0, 0);
-    // this.camera.rotateY(this.player.rotation.y);
-    // this.camera.rotateX(this.player.rotation.x);
+    // if (this.tick % 120 === 0) {
+    //   this.spawnRandomBox();
+    // }
 
-    // third persons
     this.cameraFollowPlayer(this.player);
 
     // Skybox follow player

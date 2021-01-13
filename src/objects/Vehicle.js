@@ -1,7 +1,7 @@
-/* eslint-disable new-cap */
 import * as THREE from 'three';
 
-import { Ammo, getWorld } from '../physics';
+import physics from 'src/physics';
+
 // import OrbitControls from '../OrbitControls';
 // import { Subject } from '../utils/async';
 // import ammo from '../ammo';
@@ -156,7 +156,7 @@ export default class Vehicle {
   wheelMaterial = new THREE.MeshPhongMaterial({
     color: 0x221100,
   });
-  physicsWorld = getWorld();
+  // physicsWorld = getWorld();
 
   engineForce = 0;
   vehicleSteering = 0;
@@ -194,8 +194,8 @@ export default class Vehicle {
   }
 
   setPos(x, y, z) {
-    this.body.setLinearVelocity(new Ammo.btVector3(0, 0, 0));
-    this.body.setAngularVelocity(new Ammo.btVector3(0, 0, 0));
+    // this.body.setLinearVelocity(new Ammo.btVector3(0, 0, 0));
+    // this.body.setAngularVelocity(new Ammo.btVector3(0, 0, 0));
 
     const transform = this.vehicleBody.getChassisWorldTransform();
     const origin = transform.getOrigin();
@@ -253,130 +253,130 @@ export default class Vehicle {
     const rollInfluence = 0.2;
 
     // Chassis
-    const geometry = new Ammo.btBoxShape(
-      new Ammo.btVector3(
-        chassisWidth * 0.5,
-        chassisHeight * 0.5,
-        chassisLength * 0.5,
-      ),
-    );
-    const transform = new Ammo.btTransform();
-    transform.setIdentity();
-    transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
-    transform.setRotation(
-      new Ammo.btQuaternion(
-        ZERO_QUATERNION.x,
-        ZERO_QUATERNION.y,
-        ZERO_QUATERNION.z,
-        ZERO_QUATERNION.w,
-      ),
-    );
-    const motionState = new Ammo.btDefaultMotionState(transform);
-    const localInertia = new Ammo.btVector3(0, 0, 0);
-    geometry.calculateLocalInertia(massVehicle, localInertia);
-    const body = (this.body = new Ammo.btRigidBody(
-      new Ammo.btRigidBodyConstructionInfo(
-        massVehicle,
-        motionState,
-        geometry,
-        localInertia,
-      ),
-    ));
+    // const geometry = new Ammo.btBoxShape(
+    //   new Ammo.btVector3(
+    //     chassisWidth * 0.5,
+    //     chassisHeight * 0.5,
+    //     chassisLength * 0.5,
+    //   ),
+    // );
+    // const transform = new Ammo.btTransform();
+    // transform.setIdentity();
+    // transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
+    // transform.setRotation(
+    //   new Ammo.btQuaternion(
+    //     ZERO_QUATERNION.x,
+    //     ZERO_QUATERNION.y,
+    //     ZERO_QUATERNION.z,
+    //     ZERO_QUATERNION.w,
+    //   ),
+    // );
+    // const motionState = new Ammo.btDefaultMotionState(transform);
+    // const localInertia = new Ammo.btVector3(0, 0, 0);
+    // geometry.calculateLocalInertia(massVehicle, localInertia);
+    // const body = (this.body = new Ammo.btRigidBody(
+    //   new Ammo.btRigidBodyConstructionInfo(
+    //     massVehicle,
+    //     motionState,
+    //     geometry,
+    //     localInertia,
+    //   ),
+    // ));
 
-    body.setActivationState(DISABLE_DEACTIVATION);
-    this.physicsWorld.addRigidBody(body);
-    this.chassisMesh = this.createChassisMesh(
-      chassisWidth,
-      chassisHeight,
-      chassisLength,
-    );
+    // body.setActivationState(DISABLE_DEACTIVATION);
+    // this.physicsWorld.addRigidBody(body);
+    // this.chassisMesh = this.createChassisMesh(
+    //   chassisWidth,
+    //   chassisHeight,
+    //   chassisLength,
+    // );
 
-    // Raycast Vehicle
+    // // Raycast Vehicle
 
-    const tuning = new Ammo.btVehicleTuning();
-    const rayCaster = new Ammo.btDefaultVehicleRaycaster(this.physicsWorld);
-    this.vehicleBody = this.btVehicle = new Ammo.btRaycastVehicle(
-      tuning,
-      body,
-      rayCaster,
-    );
-    this.vehicleBody.setCoordinateSystem(0, 1, 2);
-    this.physicsWorld.addAction(this.vehicleBody);
+    // const tuning = new Ammo.btVehicleTuning();
+    // const rayCaster = new Ammo.btDefaultVehicleRaycaster(this.physicsWorld);
+    // this.vehicleBody = this.btVehicle = new Ammo.btRaycastVehicle(
+    //   tuning,
+    //   body,
+    //   rayCaster,
+    // );
+    // this.vehicleBody.setCoordinateSystem(0, 1, 2);
+    // this.physicsWorld.addAction(this.vehicleBody);
 
     // Wheels
 
-    this.wheelMeshes = [];
-    const wheelDirectionCS0 = new Ammo.btVector3(0, -1, 0);
-    const wheelAxleCS = new Ammo.btVector3(-1, 0, 0);
+    // this.wheelMeshes = [];
+    // const wheelDirectionCS0 = new Ammo.btVector3(0, -1, 0);
+    // const wheelAxleCS = new Ammo.btVector3(-1, 0, 0);
 
-    const addWheel = (isFront, position, radius, width, index) => {
-      const wheelInfo = this.vehicleBody.addWheel(
-        position,
-        wheelDirectionCS0,
-        wheelAxleCS,
-        suspensionRestLength,
-        radius,
-        tuning,
-        isFront,
-      );
+    // const addWheel = (isFront, position, radius, width, index) => {
+    //   const wheelInfo = this.vehicleBody.addWheel(
+    //     position,
+    //     wheelDirectionCS0,
+    //     wheelAxleCS,
+    //     suspensionRestLength,
+    //     radius,
+    //     tuning,
+    //     isFront,
+    //   );
 
-      wheelInfo.set_m_suspensionStiffness(suspensionStiffness);
-      wheelInfo.set_m_wheelsDampingRelaxation(suspensionDamping);
-      wheelInfo.set_m_wheelsDampingCompression(suspensionCompression);
-      wheelInfo.set_m_frictionSlip(friction);
-      wheelInfo.set_m_rollInfluence(rollInfluence);
+    //   wheelInfo.set_m_suspensionStiffness(suspensionStiffness);
+    //   wheelInfo.set_m_wheelsDampingRelaxation(suspensionDamping);
+    //   wheelInfo.set_m_wheelsDampingCompression(suspensionCompression);
+    //   wheelInfo.set_m_frictionSlip(friction);
+    //   wheelInfo.set_m_rollInfluence(rollInfluence);
 
-      this.wheelMeshes[index] = this.createWheelMesh(
-        radius,
-        width,
-        position.x(),
-      );
-    };
+    //   this.wheelMeshes[index] = this.createWheelMesh(
+    //     radius,
+    //     width,
+    //     position.x(),
+    //   );
+    // };
 
-    addWheel(
-      true,
-      new Ammo.btVector3(
-        wheelHalfTrackFront,
-        wheelAxisHeightFront,
-        wheelAxisFrontPosition,
-      ),
-      wheelRadiusFront,
-      wheelWidthFront,
-      FRONT_LEFT,
-    );
-    addWheel(
-      true,
-      new Ammo.btVector3(
-        -wheelHalfTrackFront,
-        wheelAxisHeightFront,
-        wheelAxisFrontPosition,
-      ),
-      wheelRadiusFront,
-      wheelWidthFront,
-      FRONT_RIGHT,
-    );
-    addWheel(
-      false,
-      new Ammo.btVector3(
-        -wheelHalfTrackBack,
-        wheelAxisHeightBack,
-        wheelAxisPositionBack,
-      ),
-      wheelRadiusBack,
-      wheelWidthBack,
-      BACK_LEFT,
-    );
-    addWheel(
-      false,
-      new Ammo.btVector3(
-        wheelHalfTrackBack,
-        wheelAxisHeightBack,
-        wheelAxisPositionBack,
-      ),
-      wheelRadiusBack,
-      wheelWidthBack,
-      BACK_RIGHT,
-    );
+    // addWheel(
+    //   true,
+    //   new Ammo.btVector3(
+    //     wheelHalfTrackFront,
+    //     wheelAxisHeightFront,
+    //     wheelAxisFrontPosition,
+    //   ),
+    //   wheelRadiusFront,
+    //   wheelWidthFront,
+    //   FRONT_LEFT,
+    // );
+    // addWheel(
+    //   true,
+    //   new Ammo.btVector3(
+    //     -wheelHalfTrackFront,
+    //     wheelAxisHeightFront,
+    //     wheelAxisFrontPosition,
+    //   ),
+    //   wheelRadiusFront,
+    //   wheelWidthFront,
+    //   FRONT_RIGHT,
+    // );
+    // addWheel(
+    //   false,
+    //   new Ammo.btVector3(
+    //     -wheelHalfTrackBack,
+    //     wheelAxisHeightBack,
+    //     wheelAxisPositionBack,
+    //   ),
+    //   wheelRadiusBack,
+    //   wheelWidthBack,
+    //   BACK_LEFT,
+    // );
+    // addWheel(
+    //   false,
+    //   new Ammo.btVector3(
+    //     wheelHalfTrackBack,
+    //     wheelAxisHeightBack,
+    //     wheelAxisPositionBack,
+    //   ),
+    //   wheelRadiusBack,
+    //   wheelWidthBack,
+    //   BACK_RIGHT,
+    // );
   }
 
   // createObjects() {

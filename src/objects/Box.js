@@ -1,61 +1,27 @@
-/* eslint-disable new-cap */
 import * as THREE from 'three';
 
-import { Ammo, getWorld } from '../physics';
+import physics, { Body, RAPIER } from 'src/physics';
 
-export const createBox = (pos, quat, w, l, h, mass, friction) => {
-  const material = mass > 0 ? materialDynamic : materialStatic;
-  const shape = new THREE.BoxGeometry(w, l, h, 1, 1, 1);
-  const geometry = new Ammo.btBoxShape(
-    new Ammo.btVector3(w * 0.5, l * 0.5, h * 0.5),
-  );
+export default class Box {
+  constructor(pos, size = 3) {
+    const geometry = new THREE.BoxGeometry(size, size, size, 1, 1, 1);
 
-  if (!mass) mass = 0;
-  if (!friction) friction = 1;
-
-  const mesh = new THREE.Mesh(shape, material);
-  mesh.position.copy(pos);
-  mesh.quaternion.copy(quat);
-  this.scene.add(mesh);
-
-  const transform = new Ammo.btTransform();
-  transform.setIdentity();
-  transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
-  transform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
-  const motionState = new Ammo.btDefaultMotionState(transform);
-
-  const localInertia = new Ammo.btVector3(0, 0, 0);
-  geometry.calculateLocalInertia(mass, localInertia);
-
-  const rbInfo = new Ammo.btRigidBodyConstructionInfo(
-    mass,
-    motionState,
-    geometry,
-    localInertia,
-  );
-  const body = new Ammo.btRigidBody(rbInfo);
-
-  body.setFriction(friction);
-  // body.setRestitution(.9);
-  // body.setDamping(0.2, 0.2);
-
-  getWorld().physicsWorld.addRigidBody(body);
-
-  if (mass > 0) {
-    body.setActivationState(DISABLE_DEACTIVATION);
-    // Sync physics and graphics
-    syncList.push((delta) => {
-      const ms = body.getMotionState();
-      if (ms) {
-        if (!TRANSFORM_AUX) TRANSFORM_AUX = new Ammo.btTransform();
-        ms.getWorldTransform(TRANSFORM_AUX);
-        const p = TRANSFORM_AUX.getOrigin();
-        const q = TRANSFORM_AUX.getRotation();
-        mesh.position.set(p.x(), p.y(), p.z());
-        mesh.quaternion.set(q.x(), q.y(), q.z(), q.w());
-      }
+    const material = new THREE.MeshPhongMaterial({
+      color: 0xc329c9,
     });
+
+    this.mesh = new THREE.Mesh(geometry, material);
+    this.mesh.position.copy(pos);
+    // mesh.quaternion.copy(quat);
+
+    this.body = new Body(pos, physics.world);
+    this.body.addCollider(
+      RAPIER.ColliderDesc.cuboid(size * 0.5, size * 0.5, size * 0.5),
+    );
   }
 
-  return mesh;
-};
+  update() {
+    this.mesh.position.copy(this.body.rigidBody.translation());
+    this.mesh.setRotationFromQuaternion(this.body.rigidBody.rotation());
+  }
+}

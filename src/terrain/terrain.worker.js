@@ -66,6 +66,43 @@ PLANE_GEOM.rotateX(-Math.PI / 2);
 // // p[i * 3 + 1] = terrain[i];
 // };
 
+const perf = new (class Perf {
+  data = {};
+
+  start(name) {
+    this.data[name] = performance.now();
+  }
+
+  end(name) {
+    const start = this.data[name];
+    const end = performance.now();
+    if (start != null && start <= end) {
+      const delta = end - start;
+      console.log(`PERF(${name}): ${delta}ms`);
+    }
+    delete this.data[name];
+  }
+
+  measure(fn, name = '?') {
+    this.start(name);
+    const res = fn();
+    this.end(name);
+    return res;
+  }
+})();
+
+// convert array from row-major to column-major (for 2d square representation)
+const rotateArray = (from, to = []) => {
+  const l = Math.sqrt(from.length) | 0;
+
+  for (let i = 0; i < l; i++) {
+    for (let j = 0; j < l; j++) {
+      to[i * l + j] = from[j * l + i];
+    }
+  }
+  return to;
+};
+
 const generateChunk = (x, z) => {
   let terrain = generateNoiseMap(x, z);
 
@@ -80,6 +117,7 @@ const generateChunk = (x, z) => {
   for (let i = 0, j = 0; i < terrain.length; i++, j += 6) {
     geom.vertices[i].y = terrain[i];
   }
+
   // const bufferGeom = geom;
 
   // for (let i = 0; i < colors.length; i++) {
@@ -90,6 +128,7 @@ const generateChunk = (x, z) => {
   // geom.computeVertexNormals();
 
   const bufferGeom = new BufferGeometry().fromGeometry(geom);
+
   // const bufferGeom = geom;
 
   // const n = [], b = bufferGeom.attributes.position.array;
@@ -113,7 +152,12 @@ const generateChunk = (x, z) => {
   }
   // bufferGeom.addAttribute('color', new BufferAttribute(colorsArray, 3));
 
-  return bufferGeom.attributes;
+  const heightsArray = rotateArray(
+    terrain,
+    new Float32Array(CHUNK_SEGMENTS * CHUNK_SEGMENTS),
+  );
+
+  return { ...bufferGeom.attributes, heightsArray };
 };
 
 const loadChunk = async ({ x, z }) => {
@@ -134,13 +178,14 @@ const loadChunk = async ({ x, z }) => {
     }
   }
 
-  const { position, color, uv, normal } = chunkData;
+  const { position, color, uv, normal, heightsArray } = chunkData;
 
   self.postMessage({ cmd: 'terrain', x, z, attributes: chunkData }, [
     position.array.buffer,
     color.array.buffer,
     uv.array.buffer,
     normal.array.buffer,
+    heightsArray.buffer,
   ]);
 };
 
@@ -163,5 +208,7 @@ self.onmessage = ({ data }) => {
       break;
     case 'clearCache':
       mapCache.clear().catch((err) => console.warn('clearCache', err));
+      break;
+    default:
   }
 };

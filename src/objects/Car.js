@@ -16,7 +16,7 @@ class Wheel {
     this.game = this.car.game;
 
     this.offset = new THREE.Vector3(x, 0, z);
-    this.position = car.position.copy().add(this.offset);
+    this.position = car.position.clone().add(this.offset);
   }
 
   update(delta) {

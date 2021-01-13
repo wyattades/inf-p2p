@@ -42,6 +42,8 @@ export default class ChunkLoader {
       switch (data.cmd) {
         case 'terrain':
           this._receiveLoadChunk(data.x, data.z, data.attributes);
+          break;
+        default:
       }
     };
   }
@@ -152,6 +154,10 @@ export default class ChunkLoader {
     }
 
     return true;
+  }
+
+  clearMapCache() {
+    this.worker.postMessage({ cmd: 'clearMapCache' });
   }
 
   updatePhysicsChunks(x2, z2) {

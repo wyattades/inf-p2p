@@ -4,46 +4,47 @@ const startPos = {
   z: 1,
 };
 
-const save = (pos) => {
+const isNumber = (v) => typeof v === 'number' && !Number.isNaN(v);
+
+const save = ({ x, y, z }) => {
   const data = {
-    x: pos.x,
-    y: pos.y,
-    z: pos.z,
+    x,
+    y,
+    z,
   };
-  localStorage.setItem('save', JSON.stringify(data));
+  localStorage.setItem('inf-p2p:save', JSON.stringify(data));
 };
 
 const load = () => {
   let data;
   try {
-    data = JSON.parse(localStorage.getItem('save'));
+    data = JSON.parse(localStorage.getItem('inf-p2p:save'));
   } catch (_) {
     // Do nothing
   }
 
-  const pos = { ...startPos };
   if (data && typeof data === 'object') {
     const { x, y, z } = data;
-    if (x === +x) pos.x = x;
-    if (y === +y) pos.y = y;
-    if (z === +z) pos.z = z;
-    return pos;
-  } else {
-    return pos;
+    if (isNumber(x) && isNumber(y) && isNumber(z)) return { x, y, z };
   }
+
+  return { ...startPos };
 };
 
 export default class Saver {
-  constructor(pos) {
-    this.pos = pos;
+  constructor(posGet, posSet) {
+    this.posGet = posGet;
+    this.posSet = posSet;
 
     this.start();
   }
 
-  savePos = () => save(this.pos);
+  savePos = () => save(this.posGet());
 
   start() {
-    this.pos.copy(load());
+    const loaded = load();
+
+    this.posSet(loaded);
 
     // Save position every 5 seconds, and before unload
     this.saveInterval = window.setInterval(this.savePos, 5000);

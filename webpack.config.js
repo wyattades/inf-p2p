@@ -20,3 +20,6 @@ config.module.rules.push({
 
 for (const dir of ['src'])
   config.resolve.alias[dir] = path.resolve(__dirname, dir);
+
+// if (process.env.NODE_ENV === 'development')
+//   config.devtool = 'eval-cheap-module-source-map';
