@@ -1,3 +1,4 @@
+import { Collider } from '@dimforge/rapier3d';
 import * as THREE from 'three';
 
 const { Vector3 } = THREE; // it doesn't matter which Vector3 we use

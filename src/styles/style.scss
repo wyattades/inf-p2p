@@ -80,7 +80,7 @@ label {
   left: 10px;
 }
 
-#loader {
+#text-overlay {
   position: fixed;
   z-index: 100;
   left: 0;
@@ -92,8 +92,11 @@ label {
   justify-content: center;
   align-items: center;
   background-color: black;
-  // display: none;
-  p {
+  .error {
+    color: white;
+    display: block;
+  }
+  .loading {
     color: white;
     display: block;
     &:after {

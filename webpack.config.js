@@ -1,6 +1,8 @@
 const path = require('path');
+const boil = require('webpack-boiler');
 
-const config = (module.exports = require('webpack-boiler')({
+/** @type {import('webpack').Configuration} */
+const config = (module.exports = boil({
   pages: [
     {
       title: 'P2P Test',
@@ -10,7 +12,7 @@ const config = (module.exports = require('webpack-boiler')({
       },
     },
   ],
-  basename: 'inf-p2p',
+  // basename: 'inf-p2p',
 }));
 
 config.module.rules.push({
@@ -21,5 +23,4 @@ config.module.rules.push({
 for (const dir of ['src'])
   config.resolve.alias[dir] = path.resolve(__dirname, dir);
 
-// if (process.env.NODE_ENV === 'development')
-//   config.devtool = 'eval-cheap-module-source-map';
+config.experiments = { asyncWebAssembly: true };

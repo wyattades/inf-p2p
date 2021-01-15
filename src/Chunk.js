@@ -124,11 +124,13 @@ export default class Chunk {
   dispose() {
     this.heightsArray = null;
 
-    this.group.remove(this.mesh);
-    this.mesh.geometry.dispose();
-    // clear the giant ArrayBuffers
-    for (const attr in this.mesh.geometry.attributes)
-      this.mesh.geometry.deleteAttribute(attr);
+    if (this.mesh) {
+      this.group.remove(this.mesh);
+      this.mesh.geometry.dispose();
+      // clear the giant ArrayBuffers
+      for (const attr in this.mesh.geometry.attributes)
+        this.mesh.geometry.deleteAttribute(attr);
+    }
 
     if (this.debugMesh) {
       this.group.remove(this.debugMesh);

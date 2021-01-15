@@ -21,19 +21,25 @@ window.cheat = {
 };
 
 const createGame = async () => {
-  game = new Game();
-  await game.preload();
-  await game.init();
-  window.cheat.game = game;
-  await game.start();
+  try {
+    game = new Game();
+    await game.preload();
+    await game.init();
+    window.cheat.game = game;
+    await game.start();
+  } catch (err) {
+    console.error('createGame error:', err);
+    document.querySelector('#text-overlay .loader').classList.add('hidden');
+    document.querySelector('#text-overlay .error').classList.remove('hidden');
+  }
 };
 
 createGame();
 
 if (process.env.NODE_ENV === 'development' && module.hot) {
-  module.hot.accept('./Game', () => {
+  module.hot.accept('./Game.js', () => {
+    game?.dispose();
     Game = require('./Game').default;
-    game.dispose();
     createGame();
   });
 }

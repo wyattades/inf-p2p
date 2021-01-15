@@ -151,29 +151,28 @@ export default class Player {
     this.position.copy(this.body.rigidBody.translation());
     // this.rotation.copy(this.body.rigidBody.rotation());
 
-    return;
-    this.position.add(this.velocity);
+    // this.position.add(this.velocity);
 
-    // hit ground
-    const groundHeight = this.chunkLoader.getHeightAt(
-      this.position.x,
-      this.position.z,
-    );
-    const groundDist = this.position.y - playerHeight - groundHeight;
-    this.onGround = groundDist <= 0;
-    if (this.onGround) this.velocity.y = 0;
-    if (groundDist < 0) this.position.y = groundHeight + playerHeight;
+    // // hit ground
+    // const groundHeight = this.chunkLoader.getHeightAt(
+    //   this.position.x,
+    //   this.position.z,
+    // );
+    // const groundDist = this.position.y - playerHeight - groundHeight;
+    // this.onGround = groundDist <= 0;
+    // if (this.onGround) this.velocity.y = 0;
+    // if (groundDist < 0) this.position.y = groundHeight + playerHeight;
 
-    // drag
-    const velY = this.velocity.y;
-    this.velocity.y = 0;
-    if (groundDist < 0.5) {
-      this.velocity.multiplyScalar(drag);
-    }
-    this.velocity.clampLength(-maxSpeed, maxSpeed);
-    this.velocity.y = velY;
+    // // drag
+    // const velY = this.velocity.y;
+    // this.velocity.y = 0;
+    // if (groundDist < 0.5) {
+    //   this.velocity.multiplyScalar(drag);
+    // }
+    // this.velocity.clampLength(-maxSpeed, maxSpeed);
+    // this.velocity.y = velY;
 
-    // gravity
-    this.velocity.y -= gravity;
+    // // gravity
+    // this.velocity.y -= gravity;
   }
 }

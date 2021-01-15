@@ -18,7 +18,7 @@ import Box from './objects/Box';
 import physics, { loadPhysicsModule } from './physics';
 
 const $game = document.getElementById('game');
-const $loader = document.getElementById('loader');
+const $loader = document.querySelector('#text-overlay .loading');
 
 export default class Game {
   async preload() {
