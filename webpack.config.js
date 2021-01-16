@@ -5,7 +5,7 @@ const boil = require('webpack-boiler');
 const config = (module.exports = boil({
   pages: [
     {
-      title: 'P2P Test',
+      title: 'inf-p2p',
       template: './src/index.pug',
       meta: {
         description: '<Temporary description>',
@@ -23,4 +23,4 @@ config.module.rules.push({
 for (const dir of ['src'])
   config.resolve.alias[dir] = path.resolve(__dirname, dir);
 
-config.experiments = { asyncWebAssembly: true };
+config.experiments = { syncWebAssembly: true };
