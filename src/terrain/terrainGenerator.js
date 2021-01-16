@@ -2,7 +2,7 @@ import Seedrandom from 'seedrandom';
 import SimplexNoise from 'simplex-noise';
 import Bezier from 'bezier-easing';
 
-import { CHUNK_SEGMENTS } from '../constants';
+import { CHUNK_SEGMENTS } from 'src/constants';
 
 const MAGIC_MAX_HEIGHT_SCALE = 1.16;
 

@@ -1,5 +1,7 @@
-import { Collider } from '@dimforge/rapier3d';
 import * as THREE from 'three';
+// import * as RAPIER from '@dimforge/rapier3d';
+
+// export { RAPIER };
 
 const { Vector3 } = THREE; // it doesn't matter which Vector3 we use
 
@@ -14,7 +16,6 @@ const GRAVITY = -9.82 * 8;
 
 export class Body {
   /**
-   *
    * @param {import('src/objects/GameObject')} obj
    * @param {import('@dimforge/rapier3d').World} world
    */
@@ -63,7 +64,9 @@ export class Body {
   // }
 
   dispose() {
+    // removes the RigidBody and Colliders
     this.world.removeRigidBody(this.rigidBody);
+    this.rigidBody = null;
   }
 }
 
@@ -102,7 +105,7 @@ class Physics {
 
   lastError = null;
   update(delta, tick) {
-    if (tick % 2 !== 0) return;
+    // if (tick % 2 !== 0) return;
 
     try {
       this.world.step(this.eventQueue);

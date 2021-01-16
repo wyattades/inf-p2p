@@ -1,6 +1,6 @@
 {
   "comments": false,
-  "presets": [["@babel/preset-env", { "spec": true, "modules": "auto" }]],
+  "presets": [["@babel/preset-env", { "modules": "auto" }]],
   "plugins": [
     ["@babel/plugin-proposal-class-properties", { "loose": true }],
     "@babel/plugin-syntax-dynamic-import",

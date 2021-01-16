@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 
-import { CHUNK_SEGMENTS, SEGMENT_SIZE } from './constants';
-import * as options from './options';
-import physics, { Body, RAPIER } from './physics';
+import { CHUNK_SEGMENTS, SEGMENT_SIZE } from 'src/constants';
+import * as options from 'src/options';
+import physics, { Body, RAPIER } from 'src/physics';
 
 // const groundMaterial = new THREE.MeshLambertMaterial({
 //   vertexColors: THREE.FaceColors,

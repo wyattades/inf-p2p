@@ -1,5 +1,5 @@
-import { mean } from '../utils/math';
-import { CHUNK_SEGMENTS } from '../constants';
+import { mean } from 'src/utils/math';
+import { CHUNK_SEGMENTS } from 'src/constants';
 
 const COLOR_HEIGHTS = [
   { d: 0.3, c: 0x3363c2 }, // water deep

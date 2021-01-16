@@ -1,24 +1,24 @@
 import * as THREE from 'three';
 import MainLoop from 'mainloop.js';
 
-import ChunkLoader from './ChunkLoader';
-import Controls from './Controls';
-import Player from './objects/Player';
-import * as ui from './ui';
-import * as options from './options';
-import Sky from './objects/Sky';
-// import Vehicle from './objects/Vehicle';
-import * as GameState from './GameState';
-import Client from './Client';
-import { loadModel } from './utils/models';
-// import * as physics from './physics';
-// import * as debug from './debug';
-import Saver from './Saver';
-import Box from './objects/Box';
-import physics, { loadPhysicsModule } from './physics';
+import ChunkLoader from 'src/ChunkLoader';
+import Controls from 'src/Controls';
+import Player from 'src/objects/Player';
+import * as ui from 'src/ui';
+import * as options from 'src/options';
+import Sky from 'src/objects/Sky';
+// import Vehicle from 'src/objects/Vehicle';
+import * as GameState from 'src/GameState';
+import Client from 'src/Client';
+import { loadModel } from 'src/utils/models';
+// import * as physics from 'src/physics';
+// import * as debug from 'src/debug';
+import Saver from 'src/Saver';
+import Box from 'src/objects/Box';
+import physics, { loadPhysicsModule } from 'src/physics';
 
 const $game = document.getElementById('game');
-const $loader = document.querySelector('#text-overlay .loading');
+const $loader = document.querySelector('#text-overlay');
 
 export default class Game {
   async preload() {

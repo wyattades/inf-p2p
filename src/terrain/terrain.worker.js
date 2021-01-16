@@ -3,10 +3,11 @@
 import { PlaneGeometry } from 'three/src/geometries/PlaneGeometry';
 import { BufferGeometry } from 'three/src/core/BufferGeometry';
 
+import { SEGMENT_SIZE, CHUNK_SEGMENTS } from 'src/constants';
+
 import MapCache from './MapCache';
 import { generateHeightMap, generateNoiseMap } from './terrainGenerator';
 import colorMap from './colorMap';
-import { SEGMENT_SIZE, CHUNK_SEGMENTS } from '../constants';
 
 // TODO optimize geometry creation by using BufferPlaneGeometry
 // TODO reduce cached data

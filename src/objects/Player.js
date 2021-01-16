@@ -34,7 +34,7 @@ const zeroQuaternion = new THREE.Quaternion();
 
 export default class Player {
   /**
-   * @param {import('../Game').default} game
+   * @param {import('src/Game').default} game
    */
   constructor(game) {
     this.game = game;

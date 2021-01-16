@@ -1,4 +1,4 @@
-import * as options from './options';
+import * as options from 'src/options';
 
 const $info = document.getElementById('info');
 const $menu = document.getElementById('menu');

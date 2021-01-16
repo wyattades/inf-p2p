@@ -31,7 +31,7 @@ class Wheel {
 
 export default class Car extends Player {
   /**
-   * @param {import('../Game').default} game
+   * @param {import('src/Game').default} game
    */
   constructor(game) {
     super(game);

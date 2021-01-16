@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 
-import TerrainWorker from './terrain/terrain.worker';
-import Chunk from './Chunk';
-import { Subject } from './utils/async';
+import TerrainWorker from 'src/terrain/terrain.worker';
+import Chunk from 'src/Chunk';
+import { Subject } from 'src/utils/async';
 
 const DIRS = [
   [1, 0],

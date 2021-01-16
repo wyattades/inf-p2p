@@ -6,7 +6,8 @@
     "lint": "eslint src",
     "dev": "yarn && NODE_ENV=development webpack serve --hot",
     "build": "NODE_ENV=production webpack",
-    "deploy": "gh-pages -d ./dist",
+    "start": "http-server -a localhost dist",
+    "deploy": "gh-pages -d dist",
     "build-deploy": "npm run build && npm run deploy"
   },
   "dependencies": {
