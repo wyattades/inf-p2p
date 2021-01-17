@@ -36,19 +36,51 @@ type Emitter<N, C, Rest extends any[]> =
  * em.off(); // remove ALL event listeners
  */
 export default class EventManager {
-  events: {
+  private events: {
     off: 'off' | 'removeListener' | 'removeEventListener';
     eventEmitter: any;
     eventName: any;
     cb: any;
+    realCb: any;
   }[] = [];
 
-  on<N, CB, Rest extends any[]>(
+  once<
+    N extends string,
+    CB extends (...args: any[]) => void,
+    Rest extends any[]
+  >(
     eventEmitter: Emitter<N, CB, Rest>,
     eventName: N,
     cb: CB,
     ...rest: Rest
   ): EventManager {
+    this.addEvent(eventEmitter, eventName, cb, rest, true);
+
+    return this;
+  }
+
+  on<N extends string, CB extends (...args: any[]) => void, Rest extends any[]>(
+    eventEmitter: Emitter<N, CB, Rest>,
+    eventName: N,
+    cb: CB,
+    ...rest: Rest
+  ): EventManager {
+    this.addEvent(eventEmitter, eventName, cb, rest, false);
+
+    return this;
+  }
+
+  private addEvent<
+    N extends string,
+    CB extends (...args: any[]) => void,
+    Rest extends any[]
+  >(
+    eventEmitter: Emitter<N, CB, Rest>,
+    eventName: N,
+    cb: CB,
+    rest: Rest,
+    once = false,
+  ): void {
     const [on, off] =
       'on' in eventEmitter
         ? (['on', 'off'] as const)
@@ -56,10 +88,15 @@ export default class EventManager {
         ? (['addListener', 'removeListener'] as const)
         : (['addEventListener', 'removeEventListener'] as const);
 
-    (eventEmitter as any)[on](eventName, cb, ...rest);
-    this.events.push({ off, eventName, eventEmitter, cb });
+    const realCb = once
+      ? (((...args) => {
+          this.off(eventEmitter as any, eventName, cb);
+          return cb(...args);
+        }) as CB)
+      : cb;
 
-    return this;
+    (eventEmitter as any)[on](eventName, realCb, ...rest);
+    this.events.push({ off, eventName, eventEmitter, cb, realCb });
   }
 
   off<N, CB>(
@@ -82,7 +119,7 @@ export default class EventManager {
         if (eventEmitter !== e.eventEmitter) return true;
       }
 
-      (eventEmitter as any)[e.off](e.eventName, e.cb);
+      (e.eventEmitter as any)[e.off](e.eventName, e.realCb);
       return false;
     });
 

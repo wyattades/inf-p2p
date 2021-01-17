@@ -99,6 +99,7 @@ class Physics {
       else delete this.contacts[h2][h1];
     }
   };
+
   handleProximityEvent = (h1, h2, prevProx, prox) => {
     // console.log('prox', h1, h2, prevProx, prox);
   };
@@ -120,7 +121,9 @@ class Physics {
   }
 
   dispose() {
+    this.eventQueue?.free();
     this.world?.free();
+    this.contacts = {};
   }
 }
 

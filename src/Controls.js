@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 import options from 'src/options';
 import * as GameState from 'src/GameState';
+import EventManager from 'src/utils/EventManager';
 
 // TODO gamepad support, cars???
 
@@ -17,7 +18,7 @@ const DEFAULT_KEYBINDS = {
   jump: 32, // SPACE
   toggleMenu: 27, // ESC
   toggleInfo: 73, // i
-  flipCar: 70, // ???
+  flipCar: 70, // f
   clearCache: 80, // p
 };
 
@@ -38,60 +39,78 @@ export default class Controls {
       this.keybinds[key] = bindName;
       this.keystate[bindName] = false;
     }
+
+    this.em = new EventManager();
+  }
+
+  pauseFromPlaying() {
+    if (this.game.state === GameState.PLAYING) {
+      this.game.setState(GameState.PAUSED);
+    }
   }
 
   bindControls() {
     // You can only request pointer lock from a user triggered event
-    this.canvas.addEventListener('mousedown', this.onMousedown, false);
+    this.em.on(this.canvas, 'mousedown', this.onMousedown);
 
     // Update rotation from mouse motion
-    this.canvas.addEventListener('mousemove', this.onMousemove, false);
+    this.em.on(this.canvas, 'mousemove', this.onMousemove);
 
     // Update keystate from down/up events
-    window.addEventListener('keydown', this.onKeydown, false);
-    window.addEventListener('keyup', this.onKeyup, false);
+    this.em.on(window, 'keydown', this.onKeydown);
+    this.em.on(window, 'keyup', this.onKeyup);
 
     // Clear controls when leaving window
-    window.addEventListener('blur', this.onBlur, false);
-    document.addEventListener(
-      'visibilitychange',
-      this.onVisibilityChange,
-      false,
-    );
+    this.em.on(window, 'blur', this.onBlur);
+    this.em.on(document, 'blur', this.onVisibilityChange);
+    this.em.on(document.body, 'mouseleave', this.onMouseLeaveBody);
 
-    this.canvas.requestPointerLock =
-      this.canvas.requestPointerLock || this.canvas.mozRequestPointerLock;
-    document.exitPointerLock =
-      document.exitPointerLock || document.mozExitPointerLock;
+    this.canvas.requestPointerLock ||= this.canvas.mozRequestPointerLock;
+    document.exitPointerLock ||= document.mozExitPointerLock;
+
+    this.bindPointerLock('on', this.onPointerLockChange);
+  }
+
+  bindPointerLock(action, cb) {
     if ('onpointerlockchange' in document) {
-      document.addEventListener('pointerlockchange', this.onPointerLockChange);
+      this.em[action](document, 'pointerlockchange', cb);
     } else if ('onmozpointerlockchange' in document) {
-      document.addEventListener(
-        'mozpointerlockchange',
-        this.onPointerLockChange,
-      );
+      this.em[action](document, 'mozpointerlockchange', cb);
     }
   }
 
-  onPointerLockChange = () => {
-    setTimeout(() => {
-      const playing = this.game.state === GameState.PLAYING;
-      const escaping = !document.pointerLockElement;
-      if (playing && escaping) this.game.setState(GameState.PAUSED);
-    });
+  unlockPointer() {
+    if (document.pointerLockElement) {
+      document.exitPointerLock?.();
+    }
+  }
+
+  lockPointer() {
+    if (!document.pointerLockElement) {
+      this.canvas.requestPointerLock?.();
+    }
+  }
+
+  onPointerLockChange = (e) => {
+    if (!document.pointerLockElement) this.pauseFromPlaying();
   };
 
-  onVisibilityChange = () => {
-    if (document.visibilityState !== 'visible')
-      this.game.setState(GameState.PAUSED);
+  onVisibilityChange = (e) => {
+    if (document.visibilityState !== 'visible') this.pauseFromPlaying();
   };
 
-  onBlur = () => {
-    this.game.setState(GameState.PAUSED);
+  onBlur = (e) => {
+    this.pauseFromPlaying();
+  };
+
+  onMouseLeaveBody = (e) => {
+    this.pauseFromPlaying();
   };
 
   onMousedown = () => {
-    this.game.setState(GameState.PLAYING);
+    if (this.game.state === GameState.PAUSED)
+      this.game.setState(GameState.PLAYING);
+    else if (this.game.state === GameState.PLAYING) this.lockPointer();
   };
 
   onMousemove = (evt) => {
@@ -151,22 +170,6 @@ export default class Controls {
   }
 
   unbindControls() {
-    window.removeEventListener('blur', this.onBlur);
-    window.removeEventListener('keydown', this.onKeydown);
-    window.removeEventListener('keyup', this.onKeyup);
-    document.removeEventListener('visibilitychange', this.onVisibilityChange);
-    this.canvas.removeEventListener('mousemove', this.onMousemove);
-    this.canvas.removeEventListener('mousedown', this.onMousedown);
-    if ('onpointerlockchange' in document) {
-      document.removeEventListener(
-        'pointerlockchange',
-        this.onPointerLockChange,
-      );
-    } else if ('onmozpointerlockchange' in document) {
-      document.removeEventListener(
-        'mozpointerlockchange',
-        this.onPointerLockChange,
-      );
-    }
+    this.em.off();
   }
 }

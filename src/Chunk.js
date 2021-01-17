@@ -133,6 +133,7 @@ export default class Chunk {
       // clear the giant ArrayBuffers
       for (const attr in this.mesh.geometry.attributes)
         this.mesh.geometry.deleteAttribute(attr);
+      this.mesh = null;
     }
 
     if (this.debugMesh) {
@@ -140,8 +141,12 @@ export default class Chunk {
       this.debugMesh.geometry.dispose();
       for (const attr in this.debugMesh.geometry.attributes)
         this.debugMesh.geometry.deleteAttribute(attr);
+      this.debugMesh = null;
     }
 
-    if (this.body) this.body.dispose();
+    if (this.body) {
+      this.body.dispose();
+      this.body = null;
+    }
   }
 }

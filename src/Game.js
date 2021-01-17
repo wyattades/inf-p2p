@@ -47,8 +47,7 @@ export default class Game {
     // debug.enable(this.scene);
 
     this.tick = 0;
-    this.time = 10;
-    this.setTime(this.time);
+    this.setTime(10);
 
     this.chunkLoader = new ChunkLoader(this.scene, options.get('renderDist'));
 
@@ -103,6 +102,8 @@ export default class Game {
   }
 
   createRenderer() {
+    if (this.renderer) this.renderer.dispose();
+
     this.renderer = new THREE.WebGLRenderer({
       antialias: !!options.get('antialias'),
       canvas: this.canvas,
@@ -114,13 +115,15 @@ export default class Game {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
-  reload() {
-    this.dispose();
-    this.init();
-    this.start().catch((err) => {
-      console.error(err);
+  async reload() {
+    try {
+      this.dispose();
+      this.init();
+      await this.start();
+    } catch (err) {
+      console.error('reload error:', err);
       this.setState(GameState.ERROR);
-    });
+    }
   }
 
   // Resize viewport
@@ -172,13 +175,15 @@ export default class Game {
 
     this.controls.bindControls();
 
-    this.controls.bindPress('toggleInfo', () => this.ui.toggleInfo);
+    this.controls.bindPress('toggleInfo', () => this.ui.toggleInfo());
     this.controls.bindPress('toggleMenu', () => {
+      console.log(
+        'toggleMenu',
+        this.state === GameState.PLAYING ? 'PLAYING' : 'PAUSED',
+      );
       if (this.state === GameState.PAUSED) {
-        // TODO not working
-        setTimeout(() => {
-          if (this.state === GameState.PAUSED) this.setState(GameState.PLAYING);
-        }, 200);
+        // TODO: doesn't work
+        // this.setState(GameState.PLAYING);
       } else if (this.state === GameState.PLAYING) {
         this.setState(GameState.PAUSED);
       }
@@ -228,24 +233,21 @@ export default class Game {
             this.reload();
             return;
           } else if (key === 'fog') {
-            this.scene.fog = changed[key]
+            this.scene.fog = changed.fog
               ? new THREE.FogExp2(0xe2f6ff, 0.002)
               : null;
           } else if (key === 'antialias' || key === 'shadows') {
-            this.renderer.dispose();
             this.createRenderer();
           }
         }
       }
-      if (this.canvas.requestPointerLock) this.canvas.requestPointerLock();
+      this.controls.lockPointer();
     } else if (newState === GameState.PAUSED) {
-      if (document.exitPointerLock) document.exitPointerLock();
+      this.controls.unlockPointer();
       this.mainLoop.stop();
     }
 
-    $loader.classList[newState === GameState.LOADING ? 'remove' : 'add'](
-      'hidden',
-    );
+    $loader.classList.toggle('hidden', newState !== GameState.LOADING);
     this.ui.toggleMenu(newState === GameState.PAUSED); // TEMP
     this.controls.clearPresses();
   }
@@ -371,12 +373,16 @@ export default class Game {
 
   dispose() {
     // debug.disable();
-    physics.dispose();
+    this.mainLoop.stop();
     this.ui.dispose();
+    this.chunkLoader.dispose();
     this.saver.dispose();
+    this.scene.clear();
     this.client.dispose();
     this.renderer.dispose();
     this.controls.unbindControls();
+    physics.dispose();
+
     window.removeEventListener('resize', this.resize);
   }
 }

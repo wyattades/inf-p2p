@@ -12,7 +12,7 @@ const DIRS = [
 ];
 
 export default class ChunkLoader {
-  /** @type {Object<string, Chunk>} */
+  /** @type {Record<string, Chunk>} */
   chunks = {};
   chunkCount = 0;
   loadedCount = 0;
