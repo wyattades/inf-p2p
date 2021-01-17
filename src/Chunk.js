@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 import { CHUNK_SEGMENTS, SEGMENT_SIZE } from 'src/constants';
-import * as options from 'src/options';
+import options from 'src/options';
 import physics, { Body, RAPIER } from 'src/physics';
 
 // const groundMaterial = new THREE.MeshLambertMaterial({
@@ -67,6 +67,9 @@ export default class Chunk {
 
     if (this.body)
       return console.warn('Chunk#enablePhysics: body already exists');
+
+    if (!this.heightsArray)
+      return console.warn('Chunk#enablePhysics: terrain data not loaded yet');
 
     this.body = new Body(this.position, physics.world, true);
     this.body.addCollider(

@@ -4,13 +4,12 @@ export default class MapCache {
   constructor(name, version = 1) {
     this.name = name;
     this.version = version;
-    const storeName = `chunks-${name}`;
-    this.storeName = storeName;
+    this.storeName = `chunks-${name}`;
     this.disabled = false; // May enable for development
 
     this.db = openDB('mapcache', version, {
       upgrade(db) {
-        db.createObjectStore(storeName, { keyPath: ['x', 'z'] });
+        db.createObjectStore(this.storeName, { keyPath: ['x', 'z'] });
       },
     });
   }
@@ -18,7 +17,7 @@ export default class MapCache {
   async saveChunk(x, z, chunkData) {
     if (this.disabled) return;
 
-    (await this.db).put(this.storeName, {
+    await (await this.db).put(this.storeName, {
       x,
       z,
       chunkData,
@@ -47,6 +46,6 @@ export default class MapCache {
   async clear() {
     if (this.disabled) return;
 
-    (await this.db).clear(this.storeName);
+    await (await this.db).clear(this.storeName);
   }
 }

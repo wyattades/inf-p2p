@@ -1,5 +1,6 @@
 const path = require('path');
 const boil = require('webpack-boiler');
+const webpack = require('webpack');
 
 /** @type {import('webpack').Configuration} */
 const config = (module.exports = boil({
@@ -24,3 +25,6 @@ for (const dir of ['src'])
   config.resolve.alias[dir] = path.resolve(__dirname, dir);
 
 config.experiments = { syncWebAssembly: true };
+
+// not allowed in webpack-dev-server@beta-4
+delete config.devServer.watchContentBase;

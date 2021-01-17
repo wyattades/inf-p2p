@@ -28,10 +28,6 @@ label {
   display: none !important;
 }
 
-.asdasd {
-  color: #c329c9;
-}
-
 #menu {
   display: flex;
   flex-direction: column;
@@ -96,7 +92,7 @@ label {
     color: white;
     display: block;
   }
-  .loading {
+  .loader {
     color: white;
     display: block;
     &:after {

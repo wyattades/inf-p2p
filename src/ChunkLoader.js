@@ -156,10 +156,6 @@ export default class ChunkLoader {
     return true;
   }
 
-  clearMapCache() {
-    this.worker.postMessage({ cmd: 'clearMapCache' });
-  }
-
   updatePhysicsChunks(x2, z2) {
     // const chunkX = x2 * 2;
     // const chunkZ = z2 * 2;
@@ -181,7 +177,7 @@ export default class ChunkLoader {
     return this.playerChunk.getHeightAt(x, z);
   }
 
-  clearCache() {
+  clearMapCache() {
     this.worker.postMessage({ cmd: 'clearCache' });
   }
 

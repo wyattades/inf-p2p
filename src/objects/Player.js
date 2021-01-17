@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import isEmpty from 'lodash/isEmpty';
+import { isEmpty } from 'lodash';
 
 import physics, { Body, RAPIER } from 'src/physics';
 

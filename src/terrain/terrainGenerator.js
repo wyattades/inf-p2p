@@ -1,6 +1,7 @@
 import Seedrandom from 'seedrandom';
 import SimplexNoise from 'simplex-noise';
 import Bezier from 'bezier-easing';
+import _ from 'lodash';
 
 import { CHUNK_SEGMENTS } from 'src/constants';
 
@@ -80,7 +81,7 @@ const AMPLITUDE = 60.0;
 
 export const generateHeightMap = (noiseMap) => {
   for (let i = 0; i < noiseMap.length; i++) {
-    noiseMap[i] = heightCurve(noiseMap[i]) * AMPLITUDE;
+    noiseMap[i] = _.round(heightCurve(noiseMap[i]) * AMPLITUDE, 8);
   }
 
   return noiseMap;

@@ -4,8 +4,8 @@ import MainLoop from 'mainloop.js';
 import ChunkLoader from 'src/ChunkLoader';
 import Controls from 'src/Controls';
 import Player from 'src/objects/Player';
-import * as ui from 'src/ui';
-import * as options from 'src/options';
+import UI from 'src/ui';
+import options from 'src/options';
 import Sky from 'src/objects/Sky';
 // import Vehicle from 'src/objects/Vehicle';
 import * as GameState from 'src/GameState';
@@ -29,6 +29,8 @@ export default class Game {
     this.state = null;
 
     this.canvas = $game;
+
+    this.ui = new UI(this);
 
     this.camera = new THREE.PerspectiveCamera(
       45,
@@ -157,8 +159,8 @@ export default class Game {
         .toArray(),
     );
 
-    ui.set('chunkX', this.chunkLoader.playerChunk.x.toString());
-    ui.set('chunkZ', this.chunkLoader.playerChunk.z.toString());
+    this.ui.set('chunkX', this.chunkLoader.playerChunk.x.toString());
+    this.ui.set('chunkZ', this.chunkLoader.playerChunk.z.toString());
   }
 
   async start() {
@@ -170,7 +172,7 @@ export default class Game {
 
     this.controls.bindControls();
 
-    this.controls.bindPress('toggleInfo', ui.toggleInfo);
+    this.controls.bindPress('toggleInfo', () => this.ui.toggleInfo);
     this.controls.bindPress('toggleMenu', () => {
       if (this.state === GameState.PAUSED) {
         // TODO not working
@@ -244,7 +246,7 @@ export default class Game {
     $loader.classList[newState === GameState.LOADING ? 'remove' : 'add'](
       'hidden',
     );
-    ui.setActiveMenu(newState === GameState.PAUSED); // TEMP
+    this.ui.toggleMenu(newState === GameState.PAUSED); // TEMP
     this.controls.clearPresses();
   }
 
@@ -294,7 +296,7 @@ export default class Game {
   }
 
   updateEnd = (fps, panic) => {
-    ui.set('FPS', fps);
+    this.ui.set('FPS', fps);
 
     if (panic) {
       // TODO
@@ -305,9 +307,6 @@ export default class Game {
 
   update = (delta) => {
     delta = 1 / delta;
-
-    this.tick++;
-    this.time += 0.001;
 
     // Physics
     // if (this.state === GameState.PLAYING)
@@ -320,11 +319,22 @@ export default class Game {
     if (this.tick % 5 === 0) {
       this.setTime(this.time);
 
-      ui.set('x', this.player.position.x);
-      ui.set('y', this.player.position.y);
-      ui.set('z', this.player.position.z);
+      this.ui.set('x', this.player.position.x);
+      this.ui.set('y', this.player.position.y);
+      this.ui.set('z', this.player.position.z);
 
-      ui.set('tick', this.tick.toString());
+      this.ui.set('tick', this.tick.toString());
+    }
+
+    if (this.tick % 200 === 0 && window.navigator?.storage?.estimate) {
+      navigator.storage.estimate().then(({ quota, usage }) => {
+        this.ui.set(
+          'storage',
+          `${((usage / quota) * 100) | 0}% (${(usage / 1000000) | 0}/${
+            (quota / 1000000) | 0
+          } MB)`,
+        );
+      });
     }
 
     // if (this.tick % 120 === 0) {
@@ -343,13 +353,16 @@ export default class Game {
     );
 
     if (this.chunkLoader.updatePlayerChunk(chunkX, chunkZ)) {
-      ui.set('chunkX', chunkX.toString());
-      ui.set('chunkZ', chunkZ.toString());
+      this.ui.set('chunkX', chunkX.toString());
+      this.ui.set('chunkZ', chunkZ.toString());
     }
 
     // const chunkX = halfChunkX * 2;
     // const chunkZ = halfChunkZ * 2;
     // this.chunkLoader.updatePhysicsChunks(halfChunkX, halfChunkZ);
+
+    this.tick++;
+    this.time += 0.001;
   };
 
   render = () => {
@@ -359,6 +372,7 @@ export default class Game {
   dispose() {
     // debug.disable();
     physics.dispose();
+    this.ui.dispose();
     this.saver.dispose();
     this.client.dispose();
     this.renderer.dispose();

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-import * as options from 'src/options';
+import options from 'src/options';
 import * as GameState from 'src/GameState';
 
 // TODO gamepad support, cars???
