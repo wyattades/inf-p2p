@@ -24,7 +24,7 @@
   },
   "overrides": [
     {
-      "excludedFiles": ["./src"],
+      "files": ["!./src"],
       "env": { "node": true },
       "rules": {
         "import/no-extraneous-dependencies": [
