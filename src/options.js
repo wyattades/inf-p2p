@@ -1,14 +1,33 @@
+import { fromPairs } from 'lodash';
+
+export const OPTIONS = [
+  { label: 'Render Distance', key: 'renderDist', min: 1, max: 5, default: 2 },
+  { label: 'Antialiasing', key: 'antialias', default: false },
+  { label: 'Fog', key: 'fog', default: true },
+  { label: 'Shadows', key: 'shadows', default: true },
+  { label: 'Debug', key: 'debug', default: false },
+  {
+    label: 'Sensitivity',
+    key: 'mouseSensitivity',
+    min: 1,
+    max: 100,
+    default: 8,
+  },
+];
+
+// each opt in opts
+//   if opt.min != null
+//     label
+//       = opt.label
+//       input(type="range" min=(opt.min) max=(opt.max) step=(opt.step == null ? 1 : opt.step) name=(opt.key))
+//       span.rangeval
+//   else
+//     label
+//       input(type="checkbox" name=(opt.key))
+//       = opt.label
+
 class Options {
-  vals = {
-    renderDist: 2,
-    quality: 1.0,
-    shadows: true,
-    mouseSensitivity: 8,
-    antialias: false,
-    fog: true,
-    debug: false,
-    mapCache: true,
-  };
+  vals = fromPairs(OPTIONS.map((o) => [o.key, o.default]));
   changed = {};
 
   constructor() {

@@ -1,29 +1,9 @@
 import * as THREE from 'three';
 
-import physics from 'src/physics';
-
-// import OrbitControls from '../OrbitControls';
-// import { Subject } from '../utils/async';
-// import ammo from '../ammo';
-
-// const ammoLoader = new Subject();
-
-// let Ammo;
-// ammo.then((_Ammo) => {
-//   Ammo = _Ammo;
-//   ammoLoader.complete();
-// });
-
-// Detects webgl
-// if (!Detector.webgl) {
-//   Detector.addGetWebGLMessage();
-//   document.getElementById('container').innerHTML = '';
-// }
+import physics, { Body, RAPIER } from 'src/physics';
 
 // - Global variables -
-const DISABLE_DEACTIVATION = 4;
-// let TRANSFORM_AUX;
-const ZERO_QUATERNION = new THREE.Quaternion(0, 0, 0, 1);
+// const DISABLE_DEACTIVATION = 4;
 
 // Graphics variables
 // let container, stats, speedometer;
@@ -44,15 +24,6 @@ const ZERO_QUATERNION = new THREE.Quaternion(0, 0, 0, 1);
 // const timeNextSpawn = time + objectTimePeriod;
 // const maxNumObjects = 30;
 
-// Keybord actions
-const actions = {};
-const keysActions = {
-  ArrowUp: 'acceleration',
-  ArrowDown: 'braking',
-  ArrowLeft: 'left',
-  ArrowRight: 'right',
-};
-
 const FRONT_LEFT = 0;
 const FRONT_RIGHT = 1;
 const BACK_LEFT = 2;
@@ -66,26 +37,6 @@ const BACK_RIGHT = 3;
 
 //   renderer.setSize(window.innerWidth, window.innerHeight);
 // }
-
-function keyup(e) {
-  if (keysActions[e.code]) {
-    actions[keysActions[e.code]] = false;
-    e.preventDefault();
-    e.stopPropagation();
-    return false;
-  }
-  return true;
-}
-
-function keydown(e) {
-  if (keysActions[e.code]) {
-    actions[keysActions[e.code]] = true;
-    e.preventDefault();
-    e.stopPropagation();
-    return false;
-  }
-  return true;
-}
 
 // function initGraphics() {
 // container = document.getElementById('container');
@@ -163,30 +114,18 @@ export default class Vehicle {
   breakingForce = 0;
 
   /**
-   * @param {THREE.Scene} scene
+   * @param {import('src/Game').default} game
    */
-  constructor(scene, position) {
-    this.scene = scene;
-    this.startingPosition = position;
+  constructor(game, position) {
+    this.game = game;
+    this.scene = game.scene;
 
-    window.addEventListener('keydown', keydown);
-    window.addEventListener('keyup', keyup);
+    this.game.controls.setKeyBind('acceleration', 'ArrowUp');
+    this.game.controls.setKeyBind('braking', 'ArrowDown');
+    this.game.controls.setKeyBind('turnLeft', 'ArrowLeft');
+    this.game.controls.setKeyBind('turnRight', 'ArrowRight');
 
     this.createVehicle(position);
-  }
-
-  createWheelMesh(radius, width, positionX) {
-    const t = new THREE.CylinderGeometry(radius, radius, width, 24, 1);
-    t.rotateZ(Math.PI / 2);
-    const mesh = new THREE.Mesh(t, this.wheelMaterial);
-    const stickMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(width * 0.5, radius * 1.75, radius * 0.25, 1, 1, 1),
-      this.wheelMaterial,
-    );
-    stickMesh.position.x += -((Math.sign(positionX) * width) / 2);
-    mesh.add(stickMesh);
-    this.scene.add(mesh);
-    return mesh;
   }
 
   get matrixWorld() {
@@ -197,18 +136,18 @@ export default class Vehicle {
     // this.body.setLinearVelocity(new Ammo.btVector3(0, 0, 0));
     // this.body.setAngularVelocity(new Ammo.btVector3(0, 0, 0));
 
-    const transform = this.vehicleBody.getChassisWorldTransform();
-    const origin = transform.getOrigin();
-    const rotation = transform.getRotation();
+    // const transform = this.vehicleBody.getChassisWorldTransform();
+    // const origin = transform.getOrigin();
+    // const rotation = transform.getRotation();
 
-    rotation.setValue(0, 0, 0, 1);
-    transform.setRotation(rotation);
+    // rotation.setValue(0, 0, 0, 1);
+    // transform.setRotation(rotation);
 
     if (x == null) x = this.position.x;
     if (y == null) y = this.position.y;
     if (z == null) z = this.position.z;
 
-    origin.setValue(x, y, z);
+    // origin.setValue(x, y, z);
     this.position.set(x, y, z);
   }
 
@@ -216,34 +155,25 @@ export default class Vehicle {
     this.setPos(this.position.x, this.position.y + 5, this.position.z);
   }
 
-  createChassisMesh(w, l, h) {
-    const shape = new THREE.BoxGeometry(w, l, h, 1, 1, 1);
-    const mesh = new THREE.Mesh(shape, this.material);
-    this.scene.add(mesh);
-    mesh.position.copy(this.startingPosition);
-    this.position = mesh.position;
-    return mesh;
-  }
-
   createVehicle(pos) {
-    // Vehicle contants
+    // Vehicle constants:
 
-    const chassisWidth = 1.8;
-    const chassisHeight = 0.6;
-    const chassisLength = 4;
+    const chassisWidth = 4;
+    const chassisHeight = 1.5;
+    const chassisLength = 7;
     const massVehicle = 800;
 
-    const wheelAxisPositionBack = -1;
+    const wheelAxisPositionBack = -2;
     const wheelRadiusBack = 0.8;
     const wheelWidthBack = 0.4;
-    const wheelHalfTrackBack = 1.1;
-    const wheelAxisHeightBack = 0.3;
+    const wheelHalfTrackBack = chassisWidth / 2 + wheelWidthBack / 2;
+    const wheelAxisHeightBack = -0.8;
 
-    const wheelAxisFrontPosition = 1.7;
-    const wheelRadiusFront = 0.7;
-    const wheelWidthFront = 0.4;
-    const wheelHalfTrackFront = 1.1;
-    const wheelAxisHeightFront = 0.3;
+    const wheelAxisPositionFront = 2.5;
+    const wheelRadiusFront = wheelRadiusBack;
+    const wheelWidthFront = wheelWidthBack;
+    const wheelHalfTrackFront = wheelHalfTrackBack;
+    const wheelAxisHeightFront = wheelAxisHeightBack;
 
     const friction = 1000;
     const suspensionStiffness = 20.0;
@@ -252,7 +182,37 @@ export default class Vehicle {
     const suspensionRestLength = 0.6;
     const rollInfluence = 0.2;
 
-    // Chassis
+    // Chassis:
+
+    const chassisMesh = (this.chassisMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(
+        chassisWidth,
+        chassisHeight,
+        chassisLength,
+        1,
+        1,
+        1,
+      ),
+      this.material,
+    ));
+    this.position = chassisMesh.position;
+    this.position.set(20, 30, 20);
+    this.rotation = chassisMesh.rotation;
+
+    const chassisBody = (this.chassisBody = new Body(
+      chassisMesh,
+      physics.world,
+    ));
+    chassisBody.addCollider(
+      RAPIER.ColliderDesc.cuboid(
+        chassisWidth * 0.5,
+        chassisHeight * 0.5,
+        chassisLength * 0.5,
+      ),
+    );
+
+    this.scene.add(chassisMesh);
+
     // const geometry = new Ammo.btBoxShape(
     //   new Ammo.btVector3(
     //     chassisWidth * 0.5,
@@ -285,11 +245,6 @@ export default class Vehicle {
 
     // body.setActivationState(DISABLE_DEACTIVATION);
     // this.physicsWorld.addRigidBody(body);
-    // this.chassisMesh = this.createChassisMesh(
-    //   chassisWidth,
-    //   chassisHeight,
-    //   chassisLength,
-    // );
 
     // // Raycast Vehicle
 
@@ -303,80 +258,115 @@ export default class Vehicle {
     // this.vehicleBody.setCoordinateSystem(0, 1, 2);
     // this.physicsWorld.addAction(this.vehicleBody);
 
-    // Wheels
+    // Wheels:
 
-    // this.wheelMeshes = [];
-    // const wheelDirectionCS0 = new Ammo.btVector3(0, -1, 0);
-    // const wheelAxleCS = new Ammo.btVector3(-1, 0, 0);
+    this.wheelMeshes = [];
+    this.wheelBodies = [];
+    // const wheelDirectionCS0 = new THREE.Vector3(0, -1, 0);
+    // const wheelAxleCS = new THREE.Vector3(-1, 0, 0);
 
-    // const addWheel = (isFront, position, radius, width, index) => {
-    //   const wheelInfo = this.vehicleBody.addWheel(
-    //     position,
-    //     wheelDirectionCS0,
-    //     wheelAxleCS,
-    //     suspensionRestLength,
-    //     radius,
-    //     tuning,
-    //     isFront,
-    //   );
+    const addWheel = (index, radius, width, position) => {
+      const geometry = new THREE.CylinderGeometry(radius, radius, width, 24, 1);
 
-    //   wheelInfo.set_m_suspensionStiffness(suspensionStiffness);
-    //   wheelInfo.set_m_wheelsDampingRelaxation(suspensionDamping);
-    //   wheelInfo.set_m_wheelsDampingCompression(suspensionCompression);
-    //   wheelInfo.set_m_frictionSlip(friction);
-    //   wheelInfo.set_m_rollInfluence(rollInfluence);
+      const mesh = new THREE.Mesh(geometry, this.wheelMaterial);
 
-    //   this.wheelMeshes[index] = this.createWheelMesh(
-    //     radius,
-    //     width,
-    //     position.x(),
-    //   );
-    // };
+      const stickHeight = width * 0.25;
+      const stickMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(
+          radius * 1.75,
+          stickHeight,
+          radius * 0.25,
+          1,
+          1,
+          1,
+        ),
+        this.wheelMaterial,
+      );
+      stickMesh.position.y += width / 2 + stickHeight / 2;
+      mesh.add(stickMesh);
 
-    // addWheel(
-    //   true,
-    //   new Ammo.btVector3(
-    //     wheelHalfTrackFront,
-    //     wheelAxisHeightFront,
-    //     wheelAxisFrontPosition,
-    //   ),
-    //   wheelRadiusFront,
-    //   wheelWidthFront,
-    //   FRONT_LEFT,
-    // );
-    // addWheel(
-    //   true,
-    //   new Ammo.btVector3(
-    //     -wheelHalfTrackFront,
-    //     wheelAxisHeightFront,
-    //     wheelAxisFrontPosition,
-    //   ),
-    //   wheelRadiusFront,
-    //   wheelWidthFront,
-    //   FRONT_RIGHT,
-    // );
-    // addWheel(
-    //   false,
-    //   new Ammo.btVector3(
-    //     -wheelHalfTrackBack,
-    //     wheelAxisHeightBack,
-    //     wheelAxisPositionBack,
-    //   ),
-    //   wheelRadiusBack,
-    //   wheelWidthBack,
-    //   BACK_LEFT,
-    // );
-    // addWheel(
-    //   false,
-    //   new Ammo.btVector3(
-    //     wheelHalfTrackBack,
-    //     wheelAxisHeightBack,
-    //     wheelAxisPositionBack,
-    //   ),
-    //   wheelRadiusBack,
-    //   wheelWidthBack,
-    //   BACK_RIGHT,
-    // );
+      mesh.rotateZ(-Math.sign(position.x) * Math.PI * 0.5);
+
+      mesh.position.copy(position).add(this.chassisMesh.position);
+
+      this.scene.add(mesh);
+      // this.chassisMesh.add(mesh);
+
+      this.wheelMeshes[index] = mesh;
+
+      const body = new Body(mesh, physics.world);
+      body.addCollider(RAPIER.ColliderDesc.cylinder(width / 2, radius));
+
+      this.wheelBodies[index] = body;
+
+      physics.world.createJoint(
+        RAPIER.JointParams.revolute(
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(1, 0, 0),
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(-1, 0, 0),
+        ),
+        this.chassisBody.rigidBody,
+        body.rigidBody,
+      );
+
+      // const wheelInfo = this.vehicleBody.addWheel(
+      //   position,
+      //   wheelDirectionCS0,
+      //   wheelAxleCS,
+      //   suspensionRestLength,
+      //   radius,
+      //   tuning,
+      //   isFront,
+      // );
+
+      // wheelInfo.set_m_suspensionStiffness(suspensionStiffness);
+      // wheelInfo.set_m_wheelsDampingRelaxation(suspensionDamping);
+      // wheelInfo.set_m_wheelsDampingCompression(suspensionCompression);
+      // wheelInfo.set_m_frictionSlip(friction);
+      // wheelInfo.set_m_rollInfluence(rollInfluence);
+    };
+
+    addWheel(
+      FRONT_LEFT,
+      wheelRadiusFront,
+      wheelWidthFront,
+      new THREE.Vector3(
+        -wheelHalfTrackFront,
+        wheelAxisHeightFront,
+        wheelAxisPositionFront,
+      ),
+    );
+    addWheel(
+      FRONT_RIGHT,
+      wheelRadiusFront,
+      wheelWidthFront,
+      new THREE.Vector3(
+        wheelHalfTrackFront,
+        wheelAxisHeightFront,
+        wheelAxisPositionFront,
+      ),
+    );
+    addWheel(
+      BACK_LEFT,
+      wheelRadiusBack,
+      wheelWidthBack,
+      new THREE.Vector3(
+        -wheelHalfTrackBack,
+        wheelAxisHeightBack,
+        wheelAxisPositionBack,
+      ),
+    );
+    addWheel(
+      BACK_RIGHT,
+      wheelRadiusBack,
+      wheelWidthBack,
+      new THREE.Vector3(
+        wheelHalfTrackBack,
+        wheelAxisHeightBack,
+        wheelAxisPositionBack,
+      ),
+    );
   }
 
   // createObjects() {
@@ -411,23 +401,25 @@ export default class Vehicle {
     this.engineForce = 0;
     this.breakingForce = 0;
 
-    const speed = this.vehicleBody.getCurrentSpeedKmHour();
+    const speed = this.chassisBody.getSpeed();
+
+    const keystate = this.game.controls.keystate;
 
     // speedometer.innerHTML = `${(speed < 0 ? '(R) ' : '') +
     //   Math.abs(speed).toFixed(1)} km/h`;
 
-    if (actions.acceleration) {
+    if (keystate.acceleration) {
       if (speed < -1) this.breakingForce = maxBreakingForce;
       else this.engineForce = maxEngineForce;
     }
-    if (actions.braking) {
+    if (keystate.braking) {
       if (speed > 1) this.breakingForce = maxBreakingForce;
       else this.engineForce = -maxEngineForce / 2;
     }
-    if (actions.left) {
+    if (keystate.turnLeft) {
       if (this.vehicleSteering < steeringClamp)
         this.vehicleSteering += steeringIncrement;
-    } else if (actions.right) {
+    } else if (keystate.turnRight) {
       if (this.vehicleSteering > -steeringClamp)
         this.vehicleSteering -= steeringIncrement;
     } else if (this.vehicleSteering < -steeringIncrement)
@@ -438,33 +430,38 @@ export default class Vehicle {
       this.vehicleSteering = 0;
     }
 
-    this.vehicleBody.applyEngineForce(this.engineForce, BACK_LEFT);
-    this.vehicleBody.applyEngineForce(this.engineForce, BACK_RIGHT);
+    this.chassisBody.copyToObj(this.chassisMesh);
 
-    this.vehicleBody.setBrake(this.breakingForce / 2, FRONT_LEFT);
-    this.vehicleBody.setBrake(this.breakingForce / 2, FRONT_RIGHT);
-    this.vehicleBody.setBrake(this.breakingForce, BACK_LEFT);
-    this.vehicleBody.setBrake(this.breakingForce, BACK_RIGHT);
+    for (let i = 0; i < 4; i++)
+      this.wheelBodies[i].copyToObj(this.wheelMeshes[i]);
 
-    this.vehicleBody.setSteeringValue(this.vehicleSteering, FRONT_LEFT);
-    this.vehicleBody.setSteeringValue(this.vehicleSteering, FRONT_RIGHT);
+    // this.vehicleBody.applyEngineForce(this.engineForce, BACK_LEFT);
+    // this.vehicleBody.applyEngineForce(this.engineForce, BACK_RIGHT);
 
-    let tm, p, q, i;
-    const n = this.vehicleBody.getNumWheels();
-    for (i = 0; i < n; i++) {
-      this.vehicleBody.updateWheelTransform(i, true);
-      tm = this.vehicleBody.getWheelTransformWS(i);
-      p = tm.getOrigin();
-      q = tm.getRotation();
-      this.wheelMeshes[i].position.set(p.x(), p.y(), p.z());
-      this.wheelMeshes[i].quaternion.set(q.x(), q.y(), q.z(), q.w());
-    }
+    // this.vehicleBody.setBrake(this.breakingForce / 2, FRONT_LEFT);
+    // this.vehicleBody.setBrake(this.breakingForce / 2, FRONT_RIGHT);
+    // this.vehicleBody.setBrake(this.breakingForce, BACK_LEFT);
+    // this.vehicleBody.setBrake(this.breakingForce, BACK_RIGHT);
 
-    tm = this.vehicleBody.getChassisWorldTransform();
-    p = tm.getOrigin();
-    q = tm.getRotation();
-    this.chassisMesh.position.set(p.x(), p.y(), p.z());
-    this.chassisMesh.quaternion.set(q.x(), q.y(), q.z(), q.w());
+    // this.vehicleBody.setSteeringValue(this.vehicleSteering, FRONT_LEFT);
+    // this.vehicleBody.setSteeringValue(this.vehicleSteering, FRONT_RIGHT);
+
+    // let tm, p, q, i;
+    // const n = this.vehicleBody.getNumWheels();
+    // for (i = 0; i < n; i++) {
+    //   this.vehicleBody.updateWheelTransform(i, true);
+    //   tm = this.vehicleBody.getWheelTransformWS(i);
+    //   p = tm.getOrigin();
+    //   q = tm.getRotation();
+    //   this.wheelMeshes[i].position.set(p.x(), p.y(), p.z());
+    //   this.wheelMeshes[i].quaternion.set(q.x(), q.y(), q.z(), q.w());
+    // }
+
+    // tm = this.vehicleBody.getChassisWorldTransform();
+    // p = tm.getOrigin();
+    // q = tm.getRotation();
+    // this.chassisMesh.position.set(p.x(), p.y(), p.z());
+    // this.chassisMesh.quaternion.set(q.x(), q.y(), q.z(), q.w());
     // console.log(chassisMesh.position.toArray().map(x => x.toFixed(2)).join(', '));
     // for (const sync of this.syncList) sync(delta);
     // this.physicsWorld.stepSimulation(delta, 1);
@@ -474,4 +471,9 @@ export default class Vehicle {
   // render() {
   //   this.renderer.render(this.scene, camera);
   // }
+
+  dispose() {
+    this.body?.dispose();
+    this.scene.remove(this.chassisMesh);
+  }
 }

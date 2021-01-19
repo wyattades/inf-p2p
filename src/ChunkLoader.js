@@ -99,8 +99,7 @@ export default class ChunkLoader {
     } else console.warn('Received uninitialized chunk', x, z);
   }
 
-  // Only works if deltaX and deltaY are 0, 1, or -1
-  // TODO: make not glitchy!
+  // FIXME: Only works if deltaX and deltaY are 0, 1, or -1
   updatePlayerChunk(x, z) {
     if (x === this.playerChunk.x && z === this.playerChunk.z) return false;
 

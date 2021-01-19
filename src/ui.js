@@ -1,9 +1,48 @@
-import options from 'src/options';
+import options, { OPTIONS } from 'src/options';
 import * as GameState from 'src/GameState';
 import EventManager from 'src/utils/EventManager';
 
+const h = (tagName, attrs, ...children) => {
+  const $el = document.createElement(tagName);
+  for (const key in attrs || {}) {
+    $el[key] = attrs[key];
+  }
+  for (const child of children) {
+    if (typeof child === 'string' || typeof child === 'number') {
+      $el.appendChild(document.createTextNode(child.toString()));
+    } else if (child instanceof HTMLElement) {
+      $el.appendChild(child);
+    }
+  }
+  return $el;
+};
+
 export default class UI {
-  vals = {
+  static setMode(state) {
+    const show = {};
+    if (state === GameState.LOADING) {
+      show.overlay = true;
+      show.loader = true;
+    } else if (state === GameState.PLAYING) {
+      //
+    } else if (state === GameState.PAUSED) {
+      //
+    } else if (state === GameState.ERROR) {
+      show.error = true;
+    }
+
+    document
+      .querySelector('#text-overlay')
+      .classList.toggle('hidden', !show.overlay);
+    document
+      .querySelector('#text-overlay .error')
+      .classList.toggle('hidden', !show.error);
+    document
+      .querySelector('#text-overlay .loader')
+      .classList.toggle('hidden', !show.loader);
+  }
+
+  debugTextVals = {
     chunkX: null,
     chunkZ: null,
     x: null,
@@ -20,28 +59,49 @@ export default class UI {
 
     this.$info = document.getElementById('info');
     this.$menu = document.getElementById('menu');
+    const $options = document.getElementById('options');
 
     this.em = new EventManager();
 
-    for (const el of document.querySelectorAll('#options [name]')) {
-      const type = el.getAttribute('type') || 'select';
-      const valProp = type === 'checkbox' ? 'checked' : 'value';
-      const key = el.getAttribute('name');
+    while ($options.firstChild) $options.removeChild($options.firstChild);
+    for (const opt of OPTIONS) {
+      const type = opt.min == null ? 'checkbox' : 'range';
 
-      el[valProp] = options.get(key);
-
-      if (type === 'range') {
-        el.nextSibling.textContent = el[valProp];
-        this.em.on(el, 'input', () => {
-          el.nextSibling.textContent = el[valProp];
-        });
+      let $el;
+      if (type === 'checkbox') {
+        $el = h(
+          'label',
+          null,
+          h('input', {
+            type: 'checkbox',
+            checked: opt.default,
+            onchange: (e) => {
+              options.set(opt.key, e.target.checked);
+            },
+          }),
+          opt.label,
+        );
+      } else if (type === 'range') {
+        $el = h(
+          'label',
+          null,
+          opt.label,
+          h('input', {
+            type: 'range',
+            min: opt.min,
+            max: opt.max,
+            value: opt.default,
+            oninput: (e) => {
+              e.target.nextSibling.textContent = e.target.value;
+            },
+            onchange: (e) => {
+              options.set(opt.key, Number.parseInt(e.target.value, 10));
+            },
+          }),
+          h('span', null, opt.default),
+        );
       }
-
-      this.em.on(el, 'change', () => {
-        let val = el[valProp];
-        if (type === 'range') val = Number.parseInt(val, 10);
-        options.set(key, val);
-      });
+      $options.appendChild($el);
     }
 
     this.em.on(document.getElementById('resume'), 'click', () => {
@@ -52,15 +112,15 @@ export default class UI {
       this.game.chunkLoader.clearMapCache();
     });
 
-    for (const key in this.vals) {
+    for (const key in this.debugTextVals) {
       const $el = document.createElement('p');
       this.$info.appendChild($el);
-      this.vals[key] = $el;
+      this.debugTextVals[key] = $el;
     }
   }
 
   set(key, val) {
-    const $el = this.vals[key];
+    const $el = this.debugTextVals[key];
     if ($el) {
       if (typeof val === 'number') val = val.toFixed(2);
       $el.innerText = `${key}: ${val}`;

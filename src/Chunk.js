@@ -3,13 +3,14 @@ import * as THREE from 'three';
 import { CHUNK_SEGMENTS, SEGMENT_SIZE } from 'src/constants';
 import options from 'src/options';
 import physics, { Body, RAPIER } from 'src/physics';
+import { ZERO_QUATERNION } from 'src/utils/empty';
 
 // const groundMaterial = new THREE.MeshLambertMaterial({
 //   vertexColors: THREE.FaceColors,
 // });
 
 const groundMaterial = new THREE.MeshPhongMaterial({
-  vertexColors: THREE.FaceColors,
+  vertexColors: true,
   flatShading: true,
   shininess: 10,
 });
@@ -42,6 +43,10 @@ export default class Chunk {
     this.mesh = null;
   }
 
+  get quaternion() {
+    return ZERO_QUATERNION;
+  }
+
   get position() {
     return new THREE.Vector3(
       (this.x + 0.5) * Chunk.SIZE,
@@ -71,7 +76,7 @@ export default class Chunk {
     if (!this.heightsArray)
       return console.warn('Chunk#enablePhysics: terrain data not loaded yet');
 
-    this.body = new Body(this.position, physics.world, true);
+    this.body = new Body(this, physics.world, { isStatic: true });
     this.body.addCollider(
       RAPIER.ColliderDesc.heightfield(
         CHUNK_SEGMENTS - 1,

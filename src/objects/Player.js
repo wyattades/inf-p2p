@@ -29,9 +29,6 @@ const moveForce = 6000;
 const friction = 1.1;
 const restitution = 0.15;
 
-const zeroVector3 = new THREE.Vector3();
-const zeroQuaternion = new THREE.Quaternion();
-
 export default class Player {
   /**
    * @param {import('src/Game').default} game
@@ -39,25 +36,33 @@ export default class Player {
   constructor(game) {
     this.game = game;
 
-    this.chunkLoader = game.chunkLoader;
-    this.keystate = game.controls.keystate;
-    this.lookRotation = game.controls.rotation;
+    this.object = new THREE.Object3D();
+    // this.game.scene.add(this.object);
+    this.position = this.object.position;
+    this.rotation = this.object.rotation;
 
-    this.obj = new THREE.Object3D();
-    this.position = this.obj.position;
-    this.rotation = this.obj.rotation;
-
-    this.body = new Body(this.position, physics.world);
+    this.body = new Body(this.object, physics.world, { lockRotation: true });
     this.body.addCollider(
       RAPIER.ColliderDesc.capsule(playerHeight / 2, 1)
         .setFriction(friction)
         .setRestitution(restitution), // bounciness
     );
 
-    physics.registerContactListener(this.body.rigidBody.handle);
+    // TODO
+    // const floorSensorCollider = this.body.addCollider(
+    //   RAPIER.ColliderDesc.capsule(0, 0.5)
+    //     .setIsSensor(true)
+    //     .setTranslation({ x: 0, y: -playerHeight / 2, z: 0 }),
+    // );
+
+    this.body.registerContactListener();
   }
 
   setPos(x, y, z) {
+    if (x == null) x = this.position.x;
+    if (y == null) y = this.position.y;
+    if (z == null) z = this.position.z;
+
     this.position.set(x, y, z);
     this.body.rigidBody.setTranslation({ x, y, z }, false);
   }
@@ -70,42 +75,52 @@ export default class Player {
     return !isEmpty(physics.getContacts(this.body.rigidBody.handle));
   }
 
-  _motion = new THREE.Vector3(0, 0, 0);
-  _velocity = new THREE.Vector3(0, 0, 0);
-  updateControls(delta) {
+  _motion = new THREE.Vector3();
+  _velocity = new THREE.Vector3();
+  _motionRotation = new THREE.Matrix4();
+  lastJumpAt = -9999;
+  update(_delta, tick) {
+    const { x: rotAngleX, y: rotAngleY } = this.game.controls.rotation;
+
     // const speed = delta * 1.1;
-    const rotSpeed = delta * 1.2;
+    // const rotSpeed = delta * 1.2;
 
     // Apply controls to motion
     const motion = this._motion.set(0, 0, 0);
 
-    if (this.keystate.forward) {
+    const keystate = this.game.controls.keystate;
+
+    if (keystate.forward) {
       motion.z -= 1;
     }
-    if (this.keystate.backward) {
+    if (keystate.backward) {
       motion.z += 1;
     }
-    if (this.keystate.strafeLeft) {
+    if (keystate.strafeLeft) {
       motion.x -= 1;
     }
-    if (this.keystate.strafeRight) {
+    if (keystate.strafeRight) {
       motion.x += 1;
     }
 
-    if (this.keystate.cameraUp) {
-      this.lookRotation.x += rotSpeed;
-    }
-    if (this.keystate.cameraDown) {
-      this.lookRotation.x -= rotSpeed;
-    }
-    if (this.keystate.cameraLeft) {
-      this.lookRotation.y += rotSpeed;
-    }
-    if (this.keystate.cameraRight) {
-      this.lookRotation.y -= rotSpeed;
-    }
+    // if (keystate.cameraUp) {
+    //   this.lookRotation.x += rotSpeed;
+    // }
+    // if (keystate.cameraDown) {
+    //   this.lookRotation.x -= rotSpeed;
+    // }
+    // if (keystate.cameraLeft) {
+    //   this.lookRotation.y += rotSpeed;
+    // }
+    // if (keystate.cameraRight) {
+    //   this.lookRotation.y -= rotSpeed;
+    // }
 
-    if (this.keystate.jump && this.onGround()) {
+    if (
+      keystate.jump &&
+      tick - this.lastJumpAt > 30 && // ~0.5 seconds
+      this.onGround()
+    ) {
       this.body.rigidBody.setLinvel(
         {
           ...this.body.rigidBody.linvel(),
@@ -113,12 +128,15 @@ export default class Player {
         },
         true,
       );
-      // this.velocity.y = jumpSpeed;
+      this.lastJumpAt = tick;
     }
 
     // apply rotation to motion
-    const rotation = new THREE.Matrix4().makeRotationY(this.lookRotation.y);
-    motion.applyMatrix4(rotation);
+    motion.applyMatrix4(
+      this._motionRotation
+        .set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        .makeRotationY(rotAngleY),
+    );
 
     motion.setLength(moveForce);
 
@@ -132,26 +150,19 @@ export default class Player {
     );
 
     // this.velocity.add(motion);
-  }
 
-  update(_delta) {
-    // Do we even need delta if it's constant?
     // TODO move constants
-    const drag = 0.91; // TODO: Use slope
-    const gravity = 0.03; // This doesn't work cause it's not linear... TODO
+    // const drag = 0.91; // TODO: Use slope
+    // const gravity = 0.03; // This doesn't work cause it's not linear... TODO
 
-    const { x: rotX, y: rotY } = this.lookRotation;
-    this.obj.rotation.set(0, 0, 0);
+    this.object.rotation.set(0, 0, 0);
     // Y must be before X
-    this.obj.rotateY(rotY);
-    this.obj.rotateX(rotX);
-    this.body.rigidBody.setAngvel(zeroVector3);
-    this.body.rigidBody.setRotation(zeroQuaternion);
+    this.object.rotateY(rotAngleY);
+    this.object.rotateX(rotAngleX);
+    // this.body.rigidBody.setAngvel(ZERO_VECTOR3);
+    // this.body.rigidBody.setRotation(ZERO_QUATERNION);
 
-    this.position.copy(this.body.rigidBody.translation());
-    // this.rotation.copy(this.body.rigidBody.rotation());
-
-    // this.position.add(this.velocity);
+    this.body.copyToObj(this.object, true);
 
     // // hit ground
     // const groundHeight = this.chunkLoader.getHeightAt(
@@ -174,5 +185,10 @@ export default class Player {
 
     // // gravity
     // this.velocity.y -= gravity;
+  }
+
+  dispose() {
+    // physics.unregisterContactListener(this.body.rigidBody.handle)
+    this.body.dispose();
   }
 }

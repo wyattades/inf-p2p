@@ -1,7 +1,7 @@
 import Seedrandom from 'seedrandom';
 import SimplexNoise from 'simplex-noise';
 import Bezier from 'bezier-easing';
-import _ from 'lodash';
+import { round } from 'lodash';
 
 import { CHUNK_SEGMENTS } from 'src/constants';
 
@@ -69,7 +69,7 @@ const genNoiseMap = ({
 
 export const generateNoiseMap = (chunkX, chunkZ) =>
   genNoiseMap({
-    seed: 'a-19sdfu428',
+    seed: 'a-19sgfu4281',
     offset: {
       x: chunkZ * (CHUNK_SEGMENTS - 1),
       y: -chunkX * (CHUNK_SEGMENTS - 1),
@@ -81,7 +81,7 @@ const AMPLITUDE = 60.0;
 
 export const generateHeightMap = (noiseMap) => {
   for (let i = 0; i < noiseMap.length; i++) {
-    noiseMap[i] = _.round(heightCurve(noiseMap[i]) * AMPLITUDE, 8);
+    noiseMap[i] = round(heightCurve(noiseMap[i]) * AMPLITUDE, 8);
   }
 
   return noiseMap;

@@ -7,19 +7,18 @@ import EventManager from 'src/utils/EventManager';
 // TODO gamepad support, cars???
 
 const DEFAULT_KEYBINDS = {
-  forward: 87, // w
-  strafeLeft: 65, // a
-  backward: 83, // s
-  strafeRight: 68, // d
-  // cameraUp: 38, // ARROW_UP
-  // cameraDown: 40, // ARROW_DOWN
-  // cameraLeft: 37, // ARROW_LEFT
-  // cameraRight: 39, // ARROW_RIGHT
-  jump: 32, // SPACE
-  toggleMenu: 27, // ESC
-  toggleInfo: 73, // i
-  flipCar: 70, // f
-  clearCache: 80, // p
+  forward: 'w',
+  strafeLeft: 'a',
+  backward: 's',
+  strafeRight: 'd',
+  jump: ' ',
+  sprint: 'Shift',
+  crouch: 'Control',
+  toggleMenu: 'Escape',
+  toggleInfo: 'i',
+  toggleOrbit: 't',
+  flipCar: 'f',
+  clearCache: 'p',
 };
 
 export default class Controls {
@@ -35,9 +34,7 @@ export default class Controls {
 
     this.keystate = {};
     for (const bindName in DEFAULT_KEYBINDS) {
-      const key = DEFAULT_KEYBINDS[bindName];
-      this.keybinds[key] = bindName;
-      this.keystate[bindName] = false;
+      this.setKeyBind(bindName, DEFAULT_KEYBINDS[bindName]);
     }
 
     this.em = new EventManager();
@@ -91,19 +88,19 @@ export default class Controls {
     }
   }
 
-  onPointerLockChange = (e) => {
+  onPointerLockChange = () => {
     if (!document.pointerLockElement) this.pauseFromPlaying();
   };
 
-  onVisibilityChange = (e) => {
+  onVisibilityChange = () => {
     if (document.visibilityState !== 'visible') this.pauseFromPlaying();
   };
 
-  onBlur = (e) => {
+  onBlur = () => {
     this.pauseFromPlaying();
   };
 
-  onMouseLeaveBody = (e) => {
+  onMouseLeaveBody = () => {
     this.pauseFromPlaying();
   };
 
@@ -136,6 +133,7 @@ export default class Controls {
   };
 
   onKeydown = (evt) => {
+    evt.preventDefault();
     const bindName = this.keybinds[evt.which];
     if (bindName) {
       const bind = this.keystate[bindName];
@@ -145,6 +143,7 @@ export default class Controls {
   };
 
   onKeyup = (evt) => {
+    evt.preventDefault();
     const bindName = this.keybinds[evt.which];
     if (bindName) {
       const bind = this.keystate[bindName];
@@ -152,9 +151,28 @@ export default class Controls {
     }
   };
 
+  static KeyCodeMap = {
+    Shift: 16,
+    Control: 17,
+    Escape: 27,
+    ArrowUp: 38,
+    ArrowDown: 40,
+    ArrowLeft: 37,
+    ArrowRight: 39,
+  };
   setKeyBind(bindName, key) {
-    this.keybinds[bindName] = key;
+    let which;
+    if (key.length === 1) which = key.toUpperCase().charCodeAt(0);
+    else if ((which = Controls.KeyCodeMap[key]));
+    else throw new Error(`setKeyBind: invalid key ${key}`);
+
+    this.keybinds[which] = bindName;
+    this.keystate[bindName] = false;
   }
+
+  // isKeyPressed(bindName) {
+  //   return this.keystate[bindName] === true;
+  // }
 
   bindPress(bindName, fn) {
     if (bindName in DEFAULT_KEYBINDS) {

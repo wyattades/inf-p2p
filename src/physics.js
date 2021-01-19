@@ -1,12 +1,14 @@
 import * as THREE from 'three';
-// import * as RAPIER from '@dimforge/rapier3d';
 
-// export { RAPIER };
+import { ZERO_VECTOR3 } from 'src/utils/empty';
 
 const { Vector3 } = THREE; // it doesn't matter which Vector3 we use
 
 /** @type {import('@dimforge/rapier3d')} */
 export let RAPIER;
+
+/** @type {Physics} */
+let physics;
 
 export const loadPhysicsModule = async () => {
   RAPIER = await import('@dimforge/rapier3d');
@@ -16,21 +18,33 @@ const GRAVITY = -9.82 * 8;
 
 export class Body {
   /**
-   * @param {import('src/objects/GameObject')} obj
+   * @param {Pick<import('three').Object3D, 'position' | 'quaternion'>} obj
    * @param {import('@dimforge/rapier3d').World} world
    */
-  constructor(position, world, isStatic = false) {
+  constructor(obj, world, { isStatic = false, lockRotation = false } = {}) {
     this.world = world;
 
-    this.rigidBody = world.createRigidBody(
-      new RAPIER.RigidBodyDesc(
-        isStatic ? RAPIER.BodyStatus.Static : RAPIER.BodyStatus.Dynamic,
-      ).setTranslation(position),
-    );
+    let desc = new RAPIER.RigidBodyDesc(
+      isStatic ? RAPIER.BodyStatus.Static : RAPIER.BodyStatus.Dynamic,
+    )
+      .setTranslation(obj.position)
+      .setRotation(obj.quaternion);
+
+    if (lockRotation) desc = desc.lockRotations();
+
+    // .setPrincipalAngularInertia({ x: 0, y: 0, z: 0 }, true, false, false),
+
+    this.rigidBody = world.createRigidBody(desc);
   }
 
   addCollider(colliderDesc) {
     return this.world.createCollider(colliderDesc, this.rigidBody.handle);
+  }
+
+  getSpeed() {
+    this._getSpeed ||= new THREE.Vector3();
+
+    return this._getSpeed.copy(this.rigidBody.linvel()).length();
   }
 
   get colliders() {
@@ -38,6 +52,23 @@ export class Body {
     for (let i = 0, l = this.rigidBody.numColliders(); i < l; i++)
       c.push(this.world.colliders.get(this.rigidBody.collider(i)));
     return c;
+  }
+
+  resetMovement() {
+    this.rigidBody.setLinvel(ZERO_VECTOR3);
+  }
+
+  copyToObj(obj, excludeRotation = false) {
+    obj.position.copy(this.rigidBody.translation());
+    if (!excludeRotation)
+      obj.setRotationFromQuaternion(this.rigidBody.rotation());
+  }
+
+  registerContactListener() {
+    physics.registerContactListener(this.rigidBody.handle);
+  }
+  unregisterContactListener() {
+    physics.unregisterContactListener(this.rigidBody.handle);
   }
 
   // getGeometry() {
@@ -64,6 +95,7 @@ export class Body {
   // }
 
   dispose() {
+    this.unregisterContactListener();
     // removes the RigidBody and Colliders
     this.world.removeRigidBody(this.rigidBody);
     this.rigidBody = null;
@@ -83,6 +115,9 @@ class Physics {
 
   registerContactListener(handle) {
     this.contacts[handle] = {};
+  }
+  unregisterContactListener(handle) {
+    delete this.contacts[handle];
   }
 
   getContacts(handle) {
@@ -105,19 +140,13 @@ class Physics {
   };
 
   lastError = null;
-  update(delta, tick) {
+  update(_delta, _tick) {
     // if (tick % 2 !== 0) return;
 
-    try {
-      this.world.step(this.eventQueue);
-      this.lastError = null;
+    this.world.step(this.eventQueue);
 
-      this.eventQueue.drainContactEvents(this.handleContactEvent);
-      this.eventQueue.drainProximityEvents(this.handleProximityEvent);
-    } catch (err) {
-      if (this.lastError === null) console.error(err);
-      this.lastError = err.message;
-    }
+    this.eventQueue.drainContactEvents(this.handleContactEvent);
+    this.eventQueue.drainProximityEvents(this.handleProximityEvent);
   }
 
   dispose() {
@@ -127,4 +156,6 @@ class Physics {
   }
 }
 
-export default new Physics();
+physics = new Physics();
+
+export default physics;

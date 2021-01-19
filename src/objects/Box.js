@@ -14,14 +14,13 @@ export default class Box {
     this.mesh.position.copy(pos);
     // mesh.quaternion.copy(quat);
 
-    this.body = new Body(pos, physics.world);
+    this.body = new Body(this.mesh, physics.world);
     this.body.addCollider(
       RAPIER.ColliderDesc.cuboid(size * 0.5, size * 0.5, size * 0.5),
     );
   }
 
   update() {
-    this.mesh.position.copy(this.body.rigidBody.translation());
-    this.mesh.setRotationFromQuaternion(this.body.rigidBody.rotation());
+    this.body.copyToObj(this.mesh);
   }
 }

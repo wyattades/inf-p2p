@@ -1,5 +1,5 @@
-// import options from 'src/options';
-// import * as GameState from 'src/GameState';
+import * as GameState from 'src/GameState';
+import UI from 'src/ui';
 
 import 'src/styles/style.scss';
 
@@ -24,8 +24,7 @@ const createGame = async () => {
     await game.start();
   } catch (err) {
     console.error('createGame error:', err);
-    document.querySelector('#text-overlay .loader').classList.add('hidden');
-    document.querySelector('#text-overlay .error').classList.remove('hidden');
+    UI.setMode(GameState.ERROR);
   }
 };
 
