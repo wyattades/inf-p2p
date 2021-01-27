@@ -133,7 +133,8 @@ export default class Controls {
   };
 
   onKeydown = (evt) => {
-    evt.preventDefault();
+    if (!/^F\d+$/.test(evt.key)) evt.preventDefault(); // allow F<N> keys
+
     const bindName = this.keybinds[evt.which];
     if (bindName) {
       const bind = this.keystate[bindName];
@@ -143,7 +144,8 @@ export default class Controls {
   };
 
   onKeyup = (evt) => {
-    evt.preventDefault();
+    if (!/^F\d+$/.test(evt.key)) evt.preventDefault(); // allow F<N> keys
+
     const bindName = this.keybinds[evt.which];
     if (bindName) {
       const bind = this.keystate[bindName];

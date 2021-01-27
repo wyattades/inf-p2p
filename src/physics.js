@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { isEmpty } from 'lodash';
 
 import { ZERO_VECTOR3 } from 'src/utils/empty';
 
@@ -14,23 +15,38 @@ export const loadPhysicsModule = async () => {
   RAPIER = await import('@dimforge/rapier3d');
 };
 
-const GRAVITY = -9.82 * 8;
+export const GRAVITY = -9.82 * 8;
 
 export class Body {
   /**
    * @param {Pick<import('three').Object3D, 'position' | 'quaternion'>} obj
    * @param {import('@dimforge/rapier3d').World} world
    */
-  constructor(obj, world, { isStatic = false, lockRotation = false } = {}) {
+  constructor(
+    obj,
+    world,
+    {
+      bodyStatus = RAPIER.BodyStatus.Dynamic,
+      lockRotation = false,
+      lockTranslation = false,
+      angularDamping = null,
+      linearDamping = null,
+      mass = null,
+    } = {},
+  ) {
     this.world = world;
 
-    let desc = new RAPIER.RigidBodyDesc(
-      isStatic ? RAPIER.BodyStatus.Static : RAPIER.BodyStatus.Dynamic,
-    )
+    let desc = new RAPIER.RigidBodyDesc(bodyStatus)
       .setTranslation(obj.position)
       .setRotation(obj.quaternion);
 
+    if (mass != null) desc = desc.setMass(mass, false);
+    if (angularDamping != null && angularDamping >= 0)
+      desc = desc.setAngularDamping(angularDamping);
+    if (linearDamping != null && linearDamping >= 0)
+      desc = desc.setLinearDamping(linearDamping);
     if (lockRotation) desc = desc.lockRotations();
+    if (lockTranslation) desc = desc.lockTranslations();
 
     // .setPrincipalAngularInertia({ x: 0, y: 0, z: 0 }, true, false, false),
 
@@ -56,12 +72,17 @@ export class Body {
 
   resetMovement() {
     this.rigidBody.setLinvel(ZERO_VECTOR3);
+    this.rigidBody.setAngvel(ZERO_VECTOR3);
   }
 
   copyToObj(obj, excludeRotation = false) {
     obj.position.copy(this.rigidBody.translation());
     if (!excludeRotation)
       obj.setRotationFromQuaternion(this.rigidBody.rotation());
+  }
+  copyFromObj(obj, excludeRotation = false) {
+    this.rigidBody.setTranslation(obj.position);
+    if (!excludeRotation) this.rigidBody.setRotation(obj.quaternion);
   }
 
   registerContactListener() {
@@ -102,6 +123,24 @@ export class Body {
   }
 }
 
+// add 2 Vector3s
+const add = (a, b) => {
+  const c = { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z };
+  return c;
+  // return new THREE.Vector3(c.x, c.y, c.z);
+};
+
+const _pos = new THREE.Vector3(),
+  _quat = new THREE.Quaternion();
+const rot = (pos, quat) => {
+  return _pos.copy(pos).applyQuaternion(_quat.copy(quat));
+};
+
+const red = new THREE.Color(0xff0000);
+// const yellow = new THREE.Color(0xffff00);
+const orange = new THREE.Color(0xffa500);
+const green = new THREE.Color(0x00ff00);
+
 class Physics {
   init() {
     const gravity = new Vector3(0.0, GRAVITY, 0.0);
@@ -112,6 +151,7 @@ class Physics {
   }
 
   contacts = {};
+  proximities = {};
 
   registerContactListener(handle) {
     this.contacts[handle] = {};
@@ -124,19 +164,63 @@ class Physics {
     return this.contacts[handle];
   }
 
-  handleContactEvent = (h1, h2, isStarted) => {
-    if (h1 in this.contacts) {
-      if (isStarted) this.contacts[h1][h2] = true;
-      else delete this.contacts[h1][h2];
+  handleContactEvent = (body1, body2, isStarted) => {
+    if (body1 === window.FFF || body2 === window.FFF)
+      console.log('cont', body1, body2, isStarted);
+
+    let changed = false;
+    if (body1 in this.contacts) {
+      changed = true;
+      if (isStarted) this.contacts[body1][body2] = true;
+      else delete this.contacts[body1][body2];
     }
-    if (h2 in this.contacts) {
-      if (isStarted) this.contacts[h2][h1] = true;
-      else delete this.contacts[h2][h1];
+    if (body2 in this.contacts) {
+      changed = true;
+      if (isStarted) this.contacts[body2][body1] = true;
+      else delete this.contacts[body2][body1];
     }
+
+    if (changed) this.printContacts(this.contacts);
   };
 
-  handleProximityEvent = (h1, h2, prevProx, prox) => {
-    // console.log('prox', h1, h2, prevProx, prox);
+  printPairs(obj) {
+    const a = new Set();
+    for (const [h1, o] of Object.entries(obj))
+      for (const h2 of Object.keys(o)) a.add([h1, h2].sort().join('-'));
+    if (a.size > 0) console.log(...a.keys());
+  }
+
+  isProximitied(colliderHandle) {
+    return !isEmpty(this.proximities[colliderHandle]);
+  }
+
+  handleProximityEvent = (collider1, collider2, prevProx, prox) => {
+    console.log('prox', collider1, collider2, prevProx, prox);
+    // eslint-disable-next-line default-case
+    switch (prevProx) {
+      case RAPIER.Proximity.Intersecting:
+        if (prox === RAPIER.Proximity.Disjoint) {
+          delete (this.proximities[collider1] ||= {})[collider2];
+          delete (this.proximities[collider2] ||= {})[collider1];
+        } else {
+          (this.proximities[collider1] ||= {})[collider2] = true;
+          (this.proximities[collider2] ||= {})[collider1] = true;
+        }
+        break;
+      case RAPIER.Proximity.WithinMargin:
+        if (prox === RAPIER.Proximity.Disjoint) {
+          delete (this.proximities[collider1] ||= {})[collider2];
+          delete (this.proximities[collider2] ||= {})[collider1];
+        } else {
+          (this.proximities[collider1] ||= {})[collider2] = true;
+          (this.proximities[collider2] ||= {})[collider1] = true;
+        }
+        break;
+      case RAPIER.Proximity.Disjoint:
+        (this.proximities[collider1] ||= {})[collider2] = true;
+        (this.proximities[collider2] ||= {})[collider1] = true;
+        break;
+    }
   };
 
   lastError = null;
@@ -147,6 +231,68 @@ class Physics {
 
     this.eventQueue.drainContactEvents(this.handleContactEvent);
     this.eventQueue.drainProximityEvents(this.handleProximityEvent);
+  }
+
+  debugMesh() {
+    let mesh = this._debugMesh;
+    if (mesh) {
+      // clear vertices
+      mesh.geometry.vertices.length = 0;
+      mesh.geometry.colors.length = 0;
+    } else {
+      mesh = this._debugMesh = new THREE.LineSegments(
+        new THREE.Geometry(),
+        new THREE.LineBasicMaterial({ vertexColors: true }),
+      );
+    }
+
+    const bodies = {};
+
+    const addLine = (p1, p2, color) => {
+      mesh.geometry.vertices.push(p1, p2);
+      mesh.geometry.colors.push(color, color);
+    };
+
+    this.world.bodies.forEachRigidBody((body) => {
+      if (body.isDynamic()) {
+        const position = body.translation();
+        const rotation = body.rotation();
+
+        bodies[body.handle] = { position, rotation };
+
+        // for (let i = 0, l = body.numColliders(); i < l; i++) {
+        //   const collider = this.world.colliders.get(body.collider(i));
+
+        //   const shapeType = collider.shapeType();
+        //   if (RAPIER.ShapeType.Cylinder === shapeType) {
+
+        //   }
+        // }
+        addLine(position, add(position, { x: 0, y: 10, z: 0 }), red);
+      }
+    });
+
+    this.world.joints.forEachJoint((joint) => {
+      const b1 = bodies[joint.bodyHandle1()];
+      const b2 = bodies[joint.bodyHandle2()];
+
+      if (!b1 || !b2) return;
+
+      const a1 = add(b1.position, rot(joint.anchor1(), b1.rotation));
+      const a2 = add(b2.position, rot(joint.anchor2(), b2.rotation));
+      // a1 and a2 should be the same!
+
+      const x1 = rot(joint.axis1(), b1.rotation);
+      const x2 = rot(joint.axis2(), b2.rotation);
+
+      addLine(add(a1, x1), a1, orange);
+      addLine(add(a2, x2), a2, green);
+    });
+
+    mesh.geometry.verticesNeedUpdate = true;
+    mesh.geometry.colorsNeedUpdate = true;
+
+    return mesh;
   }
 
   dispose() {

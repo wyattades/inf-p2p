@@ -76,7 +76,9 @@ export default class Chunk {
     if (!this.heightsArray)
       return console.warn('Chunk#enablePhysics: terrain data not loaded yet');
 
-    this.body = new Body(this, physics.world, { isStatic: true });
+    this.body = new Body(this, physics.world, {
+      bodyStatus: RAPIER.BodyStatus.Static,
+    });
     this.body.addCollider(
       RAPIER.ColliderDesc.heightfield(
         CHUNK_SEGMENTS - 1,
@@ -110,22 +112,22 @@ export default class Chunk {
     this.mesh.matrixAutoUpdate = false; // it's not gonna move
     this.mesh.position.copy(this.position);
 
-    this.mesh.updateMatrix();
-
     this.mesh.castShadow = this.mesh.receiveShadow = options.get('shadows');
+
+    this.mesh.updateMatrix();
 
     this.group.add(this.mesh);
 
     if (options.get('debug')) {
-      this.debugMesh = new THREE.LineSegments(
+      this.debugChunkBoundsMesh = new THREE.LineSegments(
         new THREE.EdgesGeometry(
           new THREE.BoxGeometry(Chunk.SIZE, 512, Chunk.SIZE),
         ),
         new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 1 }),
       );
       this.mesh.matrixAutoUpdate = false;
-      this.debugMesh.position.copy(this.mesh.position);
-      this.group.add(this.debugMesh);
+      this.debugChunkBoundsMesh.position.copy(this.mesh.position);
+      this.group.add(this.debugChunkBoundsMesh);
     }
   }
 
@@ -141,12 +143,12 @@ export default class Chunk {
       this.mesh = null;
     }
 
-    if (this.debugMesh) {
-      this.group.remove(this.debugMesh);
-      this.debugMesh.geometry.dispose();
-      for (const attr in this.debugMesh.geometry.attributes)
-        this.debugMesh.geometry.deleteAttribute(attr);
-      this.debugMesh = null;
+    if (this.debugChunkBoundsMesh) {
+      this.group.remove(this.debugChunkBoundsMesh);
+      this.debugChunkBoundsMesh.geometry.dispose();
+      for (const attr in this.debugChunkBoundsMesh.geometry.attributes)
+        this.debugChunkBoundsMesh.geometry.deleteAttribute(attr);
+      this.debugChunkBoundsMesh = null;
     }
 
     if (this.body) {

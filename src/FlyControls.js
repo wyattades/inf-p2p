@@ -38,7 +38,7 @@ export default class FlyControls {
         .makeRotationY(rotAngleY),
     );
 
-    let speed = delta;
+    let speed = delta * 20;
     if (keystate.sprint) speed *= 2;
 
     motion.setLength(speed);

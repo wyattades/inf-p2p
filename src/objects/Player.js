@@ -7,27 +7,22 @@ import physics, { Body, RAPIER } from 'src/physics';
 
 const _clamp = new THREE.Vector2(0, 0);
 const clampXZ = (vec3, max) => {
-  _clamp.set(vec3.x, vec3.z);
+  _clamp.set(vec3.x, vec3.z).clampLength(0, max);
 
-  if (_clamp.lengthSq() > max * max) {
-    _clamp.setLength(max);
-
-    return {
-      x: _clamp.x,
-      y: vec3.y,
-      z: _clamp.y,
-    };
-  }
+  vec3.x = _clamp.x;
+  vec3.z = _clamp.y;
 
   return vec3;
 };
 
-const playerHeight = 4.0;
+const playerHeight = 6.0;
+const playerWidth = 2.0;
 const jumpSpeed = 40;
 const maxSpeed = 45;
 const moveForce = 6000;
 const friction = 1.1;
 const restitution = 0.15;
+const floorColliderDist = 1.0;
 
 export default class Player {
   /**
@@ -43,18 +38,21 @@ export default class Player {
 
     this.body = new Body(this.object, physics.world, { lockRotation: true });
     this.body.addCollider(
-      RAPIER.ColliderDesc.capsule(playerHeight / 2, 1)
+      RAPIER.ColliderDesc.capsule(
+        Math.max(0, playerHeight / 2 - playerWidth / 2),
+        playerWidth / 2,
+      )
         .setFriction(friction)
         .setRestitution(restitution), // bounciness
     );
 
-    // TODO
-    // const floorSensorCollider = this.body.addCollider(
-    //   RAPIER.ColliderDesc.capsule(0, 0.5)
-    //     .setIsSensor(true)
-    //     .setTranslation({ x: 0, y: -playerHeight / 2, z: 0 }),
-    // );
+    this.floorColliderHandle = this.body.addCollider(
+      RAPIER.ColliderDesc.ball(floorColliderDist)
+        .setIsSensor(true)
+        .setTranslation({ x: 0, y: -playerHeight / 2, z: 0 }),
+    ).handle;
 
+    // this.floorSensor.registerContactListener();
     this.body.registerContactListener();
   }
 
@@ -63,8 +61,10 @@ export default class Player {
     if (y == null) y = this.position.y;
     if (z == null) z = this.position.z;
 
-    this.position.set(x, y, z);
-    this.body.rigidBody.setTranslation({ x, y, z }, false);
+    this.object.position.set(x, y, z);
+
+    this.body.resetMovement();
+    this.body.copyFromObj(this.object, true);
   }
 
   get velocity() {
@@ -72,18 +72,25 @@ export default class Player {
   }
 
   onGround() {
-    return !isEmpty(physics.getContacts(this.body.rigidBody.handle));
+    // FIXME: for some reason proximity events are not emitted when colliding with terrain
+    // (static bodies) so we need to use the getHeightAt code below
+    if (physics.isProximitied(this.floorColliderHandle)) return true;
+
+    const groundHeight = this.game.chunkLoader.getHeightAt(
+      this.position.x,
+      this.position.z,
+    );
+
+    return (
+      this.position.y - playerHeight / 2 - floorColliderDist <= groundHeight
+    );
   }
 
   _motion = new THREE.Vector3();
-  _velocity = new THREE.Vector3();
   _motionRotation = new THREE.Matrix4();
   lastJumpAt = -9999;
   update(_delta, tick) {
     const { x: rotAngleX, y: rotAngleY } = this.game.controls.rotation;
-
-    // const speed = delta * 1.1;
-    // const rotSpeed = delta * 1.2;
 
     // Apply controls to motion
     const motion = this._motion.set(0, 0, 0);
@@ -103,23 +110,12 @@ export default class Player {
       motion.x += 1;
     }
 
-    // if (keystate.cameraUp) {
-    //   this.lookRotation.x += rotSpeed;
-    // }
-    // if (keystate.cameraDown) {
-    //   this.lookRotation.x -= rotSpeed;
-    // }
-    // if (keystate.cameraLeft) {
-    //   this.lookRotation.y += rotSpeed;
-    // }
-    // if (keystate.cameraRight) {
-    //   this.lookRotation.y -= rotSpeed;
-    // }
+    const onGround = this.onGround();
 
     if (
       keystate.jump &&
       tick - this.lastJumpAt > 30 && // ~0.5 seconds
-      this.onGround()
+      onGround
     ) {
       this.body.rigidBody.setLinvel(
         {
@@ -138,29 +134,19 @@ export default class Player {
         .makeRotationY(rotAngleY),
     );
 
-    motion.setLength(moveForce);
+    motion.setLength(onGround ? moveForce : moveForce * 0.2);
 
-    // console.log(vel, clamped, this.body.rigidBody.linvel());
-
-    // add acc and vel
     this.body.rigidBody.applyForce(motion, true);
 
-    this.body.rigidBody.setLinvel(
-      clampXZ(this.body.rigidBody.linvel(), maxSpeed),
-    );
+    const linVel = this.body.rigidBody.linvel();
+    this.body.rigidBody.setLinvel(clampXZ(linVel, maxSpeed));
 
-    // this.velocity.add(motion);
-
-    // TODO move constants
     // const drag = 0.91; // TODO: Use slope
-    // const gravity = 0.03; // This doesn't work cause it's not linear... TODO
 
     this.object.rotation.set(0, 0, 0);
     // Y must be before X
     this.object.rotateY(rotAngleY);
     this.object.rotateX(rotAngleX);
-    // this.body.rigidBody.setAngvel(ZERO_VECTOR3);
-    // this.body.rigidBody.setRotation(ZERO_QUATERNION);
 
     this.body.copyToObj(this.object, true);
 

@@ -19,27 +19,26 @@ const h = (tagName, attrs, ...children) => {
 
 export default class UI {
   static setMode(state) {
-    const show = {};
+    let textOverlay = null;
     if (state === GameState.LOADING) {
-      show.overlay = true;
-      show.loader = true;
+      textOverlay = 'loader';
     } else if (state === GameState.PLAYING) {
       //
     } else if (state === GameState.PAUSED) {
       //
     } else if (state === GameState.ERROR) {
-      show.error = true;
+      textOverlay = 'error';
     }
 
     document
       .querySelector('#text-overlay')
-      .classList.toggle('hidden', !show.overlay);
+      .classList.toggle('hidden', !textOverlay);
     document
       .querySelector('#text-overlay .error')
-      .classList.toggle('hidden', !show.error);
+      .classList.toggle('hidden', textOverlay !== 'error');
     document
       .querySelector('#text-overlay .loader')
-      .classList.toggle('hidden', !show.loader);
+      .classList.toggle('hidden', textOverlay !== 'loader');
   }
 
   debugTextVals = {

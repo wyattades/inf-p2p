@@ -13,7 +13,7 @@ import Player from 'src/objects/Player';
 import UI from 'src/ui';
 import options from 'src/options';
 import Sky from 'src/objects/Sky';
-// import Vehicle from 'src/objects/Vehicle';
+import Vehicle from 'src/objects/Vehicle';
 import * as GameState from 'src/GameState';
 // import Client from 'src/Client';
 // import { loadModel } from 'src/utils/models';
@@ -55,7 +55,7 @@ export default class Game {
 
     this.player = new Player(this);
 
-    // this.vehicle = new Vehicle(this);
+    this.vehicle = new Vehicle(this);
 
     this.createLights();
 
@@ -66,6 +66,10 @@ export default class Game {
 
     this.objectGroup = new THREE.Group();
     this.scene.add(this.objectGroup);
+
+    if (options.get('debug')) {
+      this.scene.add(physics.debugMesh());
+    }
 
     // this.client = new Client(this.player);
 
@@ -142,7 +146,7 @@ export default class Game {
   async reload() {
     try {
       this.dispose();
-      this.init();
+      await this.init();
       await this.start();
     } catch (err) {
       console.error('reload error:', err);
@@ -158,6 +162,7 @@ export default class Game {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
+    this.render();
   };
 
   createLights() {
@@ -220,7 +225,6 @@ export default class Game {
 
   async start() {
     await this.loadTerrain();
-    // await this.vehicle.load();
 
     // Start the update and render loops
     this.mainLoop.start();
@@ -247,9 +251,9 @@ export default class Game {
         this.flyControls = new FlyControls(this);
       }
     });
-    // this.controls.bindPress('flipCar', () => {
-    //   this.vehicle.flip();
-    // });
+    this.controls.bindPress('flipCar', () => {
+      this.vehicle?.flip();
+    });
     // loadModel('person')
     // .then((obj) => {
     //   obj.scale.setScalar(0.034);
@@ -360,7 +364,7 @@ export default class Game {
 
   update(delta) {
     if (this.flyControls) {
-      this.flyControls.update(delta * 20);
+      this.flyControls.update(delta, this.tick);
     } else {
       this.player?.update(delta, this.tick);
     }
@@ -425,6 +429,10 @@ export default class Game {
       this.ui.set('tick', this.tick.toString());
     }
 
+    if (options.get('debug') && this.tick % 5 === 0) {
+      physics.debugMesh(); // just updates the geometry
+    }
+
     if (this.tick % 200 === 0 && window.navigator?.storage?.estimate) {
       navigator.storage.estimate().then(({ quota, usage }) => {
         this.ui.set(
@@ -435,10 +443,6 @@ export default class Game {
         );
       });
     }
-
-    // const chunkX = halfChunkX * 2;
-    // const chunkZ = halfChunkZ * 2;
-    // this.chunkLoader.updatePhysicsChunks(halfChunkX, halfChunkZ);
 
     this.tick++;
     this.time += 0.001;

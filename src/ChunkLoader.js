@@ -171,7 +171,7 @@ export default class ChunkLoader {
   }
 
   getHeightAt(x, z) {
-    if (!this.playerChunk) return 0;
+    if (!this.playerChunk) return -99999;
 
     return this.playerChunk.getHeightAt(x, z);
   }
