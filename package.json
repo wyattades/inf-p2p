@@ -19,7 +19,7 @@
     "seedrandom": "^3.0.5",
     "simple-peer": "^9.9.3",
     "simplex-noise": "^2.4.0",
-    "three": "^0.124.0"
+    "three": "^0.137.0"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.12.1",
