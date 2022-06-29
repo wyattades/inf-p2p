@@ -53,12 +53,18 @@ const generateChunk = (x, z) => {
   const colorsArray = bufferGeom.attributes.color.array;
   for (let i = 0, j = 0; i < colors.length; i++, j += 9) {
     const c = colors[i];
-    colorsArray[j] = colorsArray[j + 3] = colorsArray[j + 6] =
-      ((c >> 16) & 255) * 0.00390625;
-    colorsArray[j + 1] = colorsArray[j + 4] = colorsArray[j + 7] =
-      ((c >> 8) & 255) * 0.00390625;
-    colorsArray[j + 2] = colorsArray[j + 5] = colorsArray[j + 8] =
-      (c & 255) * 0.00390625;
+    colorsArray[j] =
+      colorsArray[j + 3] =
+      colorsArray[j + 6] =
+        ((c >> 16) & 255) * 0.00390625;
+    colorsArray[j + 1] =
+      colorsArray[j + 4] =
+      colorsArray[j + 7] =
+        ((c >> 8) & 255) * 0.00390625;
+    colorsArray[j + 2] =
+      colorsArray[j + 5] =
+      colorsArray[j + 8] =
+        (c & 255) * 0.00390625;
   }
 
   const heightsArray = rotateArray(

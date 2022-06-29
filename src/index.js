@@ -3,7 +3,7 @@ import UI from 'src/ui';
 
 import 'src/styles/style.scss';
 
-let Game = require('src/Game').default;
+const Game = require('src/Game').default;
 
 let game;
 

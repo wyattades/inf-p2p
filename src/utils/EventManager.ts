@@ -47,7 +47,7 @@ export default class EventManager {
   once<
     N extends string,
     CB extends (...args: any[]) => void,
-    Rest extends any[]
+    Rest extends any[],
   >(
     eventEmitter: Emitter<N, CB, Rest>,
     eventName: N,
@@ -73,7 +73,7 @@ export default class EventManager {
   private addEvent<
     N extends string,
     CB extends (...args: any[]) => void,
-    Rest extends any[]
+    Rest extends any[],
   >(
     eventEmitter: Emitter<N, CB, Rest>,
     eventName: N,
