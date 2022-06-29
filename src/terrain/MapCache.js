@@ -1,15 +1,35 @@
 import { openDB } from 'idb';
 
 export default class MapCache {
-  constructor(name, version = 1) {
+  constructor(name, version = 2) {
     this.name = name;
     this.version = version;
     this.storeName = `chunks-${name}`;
     this.disabled = false; // May enable for development
 
-    this.db = openDB('mapcache', version, {
-      upgrade(db) {
-        db.createObjectStore(this.storeName, { keyPath: ['x', 'z'] });
+    // use a temporary proxy to allow accessing this.db immediately
+    this.db = new Proxy(
+      {},
+      {
+        get: (_target, key) => {
+          return async (...args) => {
+            this.db = await (this._createDbPromise ||= this.createDb());
+
+            return this.db[key](...args);
+          };
+        },
+      },
+    );
+  }
+
+  createDb() {
+    return openDB('mapcache', this.version, {
+      upgrade: (db, oldVersion, newVersion) => {
+        console.log('Upgrading object store:', oldVersion, '->', newVersion);
+        const store = db.createObjectStore(this.storeName, {
+          keyPath: ['x', 'z'],
+        });
+        console.log('Created object store:', store.name);
       },
     });
   }
@@ -17,7 +37,7 @@ export default class MapCache {
   async saveChunk(x, z, chunkData) {
     if (this.disabled) return;
 
-    await (await this.db).put(this.storeName, {
+    await this.db.put(this.storeName, {
       x,
       z,
       chunkData,
@@ -28,7 +48,7 @@ export default class MapCache {
   async loadChunk(x, z) {
     if (this.disabled) return null;
 
-    const data = await (await this.db).get(this.storeName, [x, z]);
+    const data = await this.db.get(this.storeName, [x, z]);
     return (data && data.chunkData) || null;
   }
 
@@ -46,6 +66,6 @@ export default class MapCache {
   async clear() {
     if (this.disabled) return;
 
-    await (await this.db).clear(this.storeName);
+    await this.db.clear(this.storeName);
   }
 }
