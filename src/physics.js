@@ -92,6 +92,10 @@ export class Body {
     physics.unregisterContactListener(this.rigidBody.handle);
   }
 
+  getRotation() {
+    return this.rigidBody.rotation();
+  }
+
   // getGeometry() {
   //   const collider = this.colliders[0];
   //   const indices = collider.trimeshIndices();
@@ -136,10 +140,12 @@ const rot = (pos, quat) => {
   return _pos.copy(pos).applyQuaternion(_quat.copy(quat));
 };
 
-const red = new THREE.Color(0xff0000);
-// const yellow = new THREE.Color(0xffff00);
-const orange = new THREE.Color(0xffa500);
-const green = new THREE.Color(0x00ff00);
+const COLORS = {
+  red: new THREE.Color(0xff0000),
+  orange: new THREE.Color(0xffa500),
+  green: new THREE.Color(0x00ff00),
+  yellow: new THREE.Color(0xffff00),
+};
 
 class Physics {
   init() {
@@ -165,8 +171,8 @@ class Physics {
   }
 
   handleContactEvent = (body1, body2, isStarted) => {
-    if (body1 === window.FFF || body2 === window.FFF)
-      console.log('cont', body1, body2, isStarted);
+    // if (body1 === window.FFF || body2 === window.FFF)
+    //   console.log('cont', body1, body2, isStarted);
 
     let changed = false;
     if (body1 in this.contacts) {
@@ -195,7 +201,7 @@ class Physics {
   }
 
   handleProximityEvent = (collider1, collider2, prevProx, prox) => {
-    console.log('prox', collider1, collider2, prevProx, prox);
+    // console.log('prox', collider1, collider2, prevProx, prox);
     // eslint-disable-next-line default-case
     switch (prevProx) {
       case RAPIER.Proximity.Intersecting:
@@ -233,6 +239,14 @@ class Physics {
     this.eventQueue.drainProximityEvents(this.handleProximityEvent);
   }
 
+  debugForces = {};
+  updateDebugForce(key, orig, force) {
+    if (!this._debugMesh) return;
+
+    if (!orig) delete this.debugForces[key];
+    else this.debugForces[key] = [orig, add(orig, force)];
+  }
+
   debugMesh() {
     let mesh = this._debugMesh;
     if (mesh) {
@@ -246,12 +260,16 @@ class Physics {
       );
     }
 
-    const bodies = {};
-
     const addLine = (p1, p2, color) => {
       mesh.geometry.vertices.push(p1, p2);
       mesh.geometry.colors.push(color, color);
     };
+
+    for (const [p1, p2] of Object.values(this.debugForces)) {
+      addLine(p1, p2, COLORS.yellow);
+    }
+
+    const bodies = {};
 
     this.world.bodies.forEachRigidBody((body) => {
       if (body.isDynamic()) {
@@ -268,7 +286,7 @@ class Physics {
 
         //   }
         // }
-        addLine(position, add(position, { x: 0, y: 10, z: 0 }), red);
+        addLine(position, add(position, { x: 0, y: 10, z: 0 }), COLORS.red);
       }
     });
 
@@ -285,8 +303,8 @@ class Physics {
       const x1 = rot(joint.axis1(), b1.rotation);
       const x2 = rot(joint.axis2(), b2.rotation);
 
-      addLine(add(a1, x1), a1, orange);
-      addLine(add(a2, x2), a2, green);
+      addLine(add(a1, x1), a1, COLORS.orange);
+      addLine(add(a2, x2), a2, COLORS.green);
     });
 
     mesh.geometry.verticesNeedUpdate = true;
