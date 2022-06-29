@@ -19,6 +19,7 @@ const DEFAULT_KEYBINDS = {
   toggleOrbit: 't',
   flipCar: 'f',
   clearCache: 'p',
+  toggleCamera: 'c',
 };
 
 export default class Controls {

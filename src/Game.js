@@ -223,6 +223,8 @@ export default class Game {
     this.ui.set('chunkZ', this.chunkLoader.playerChunk.z.toString());
   }
 
+  followType = null;
+
   async start() {
     await this.loadTerrain();
 
@@ -250,6 +252,10 @@ export default class Game {
       } else {
         this.flyControls = new FlyControls(this);
       }
+    });
+    this.controls.bindPress('toggleCamera', () => {
+      if (this.followType === 'vehicle') this.followType = null;
+      else this.followType = 'vehicle';
     });
     this.controls.bindPress('flipCar', () => {
       this.vehicle?.flip();
@@ -389,16 +395,16 @@ export default class Game {
 
     let followPosition = null;
 
-    if (this.flyControls) {
+    if (this.followType === 'vehicle' && this.vehicle) {
+      this.cameraFollowVehicle(this.vehicle);
+
+      followPosition = this.vehicle.position;
+    } else if (this.flyControls) {
       followPosition = this.flyControls.object.position;
     } else if (this.player) {
       this.cameraFollowPlayer(this.player);
 
       followPosition = this.player.position;
-    } else if (this.vehicle) {
-      this.cameraFollowVehicle(this.vehicle);
-
-      followPosition = this.vehicle.position;
     }
 
     if (followPosition) {
@@ -434,6 +440,7 @@ export default class Game {
     }
 
     if (this.tick % 200 === 0 && window.navigator?.storage?.estimate) {
+      // console.log(this.renderer.info.memory.geometries);
       navigator.storage.estimate().then(({ quota, usage }) => {
         this.ui.set(
           'storage',
