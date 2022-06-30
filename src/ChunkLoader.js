@@ -49,7 +49,23 @@ export default class ChunkLoader {
       }
     });
   }
-    };
+
+  cmdIdCounter = 0;
+  workerCmd(cmd, body, wait = false) {
+    if (!wait) return this.worker.postMessage({ cmd, ...(body || {}) });
+
+    return new Promise((resolve) => {
+      const cmdId = this.cmdIdCounter++;
+      const cb = ({ data }) => {
+        if (data.cmd === 'worker_response' && data.cmdId === cmdId) {
+          this.worker.removeEventListener('message', cb);
+          resolve(data.response);
+        }
+      };
+      this.worker.addEventListener('message', cb);
+
+      this.worker.postMessage({ cmd, cmdId, ...(body || {}) });
+    });
   }
 
   async loadInitial(playerX, playerZ) {
@@ -83,7 +99,7 @@ export default class ChunkLoader {
 
     const lod = 1; // (this.playerChunk.x - x)this.renderDist
 
-    this.worker.postMessage({ cmd: 'loadChunk', x: chunk.x, z: chunk.z, lod });
+    this.workerCmd('loadChunk', { x: chunk.x, z: chunk.z, lod });
     return chunk;
   }
 
@@ -180,8 +196,8 @@ export default class ChunkLoader {
     return this.playerChunk.getHeightAt(x, z);
   }
 
-  clearMapCache() {
-    this.worker.postMessage({ cmd: 'clearCache' });
+  async clearMapCache() {
+    await this.workerCmd('clearCache', null, true);
   }
 
   unloadChunks() {

@@ -107,22 +107,41 @@ const loadChunk = async ({ x, z }) => {
   ]);
 };
 
+const clearCache = async () => {
+  try {
+    await mapCache.clear();
+  } catch (err) {
+    console.warn('clearCache', err);
+  }
+};
+
 // TODO: test if this is faster when initial loading
 // const loadChunks = async ({ chunks }) => {
 //   for (const chunk of chunks) loadChunk(chunk);
 // };
 
-self.onmessage = ({ data }) => {
+self.onmessage = async ({ data }) => {
+  // console.log('terrain worker onmessage:', data);
+
+  let res;
   switch (data.cmd) {
     // case 'loadChunks':
     //   loadChunks(data);
     //   break;
     case 'loadChunk':
-      loadChunk(data);
+      res = await loadChunk(data);
       break;
     case 'clearCache':
-      mapCache.clear().catch((err) => console.warn('clearCache', err));
+      res = await clearCache();
       break;
     default:
+      throw new Error(`Unknown command: ${data.cmd}`);
   }
+
+  if (data.cmdId != null)
+    self.postMessage({
+      cmd: 'worker_response',
+      cmdId: data.cmdId,
+      response: res,
+    });
 };

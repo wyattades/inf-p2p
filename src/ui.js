@@ -110,8 +110,9 @@ export default class UI {
       this.game.setState(GameState.PLAYING);
     });
 
-    this.em.on(document.getElementById('clearMapCache'), 'click', () => {
-      this.game.chunkLoader.clearMapCache();
+    this.em.on(document.getElementById('clearMapCache'), 'click', async () => {
+      await this.game.chunkLoader.clearMapCache();
+      await this.game.setup();
     });
 
     for (const key in this.debugTextVals) {
