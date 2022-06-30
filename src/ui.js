@@ -58,13 +58,16 @@ export default class UI {
 
     this.$info = document.getElementById('info');
     this.$menu = document.getElementById('menu');
-    const $options = document.getElementById('options');
+    const $options = (this.$options = document.getElementById('options'));
 
     this.em = new EventManager();
 
     while ($options.firstChild) $options.removeChild($options.firstChild);
+
     for (const opt of OPTIONS) {
       const type = opt.min == null ? 'checkbox' : 'range';
+
+      const value = options.get(opt.key) ?? opt.default;
 
       let $el;
       if (type === 'checkbox') {
@@ -73,7 +76,7 @@ export default class UI {
           null,
           h('input', {
             type: 'checkbox',
-            checked: opt.default,
+            checked: value,
             onchange: (e) => {
               options.set(opt.key, e.target.checked);
             },
@@ -89,7 +92,7 @@ export default class UI {
             type: 'range',
             min: opt.min,
             max: opt.max,
-            value: opt.default,
+            value,
             oninput: (e) => {
               e.target.nextSibling.textContent = e.target.value;
             },
@@ -97,7 +100,7 @@ export default class UI {
               options.set(opt.key, Number.parseInt(e.target.value, 10));
             },
           }),
-          h('span', null, opt.default),
+          h('span', null, value),
         );
       }
       $options.appendChild($el);
@@ -142,9 +145,12 @@ export default class UI {
 
   dispose() {
     this.em.off();
+
     this.toggleMenu(false);
     this.toggleInfo(false);
 
-    while (this.$info.firstChild) this.$info.removeChild(this.$info.lastChild);
+    while (this.$info.firstChild) this.$info.removeChild(this.$info.firstChild);
+    while (this.$options.firstChild)
+      this.$options.removeChild(this.$options.firstChild);
   }
 }
