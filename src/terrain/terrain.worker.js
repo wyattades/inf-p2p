@@ -1,8 +1,7 @@
 /* eslint-disable no-restricted-globals */
 
 import { isInteger } from 'lodash';
-import { PlaneGeometry } from 'three/src/geometries/PlaneGeometry';
-import { BufferGeometry } from 'three/src/core/BufferGeometry';
+import { BufferAttribute, PlaneGeometry } from 'three';
 
 import { SEGMENT_SIZE, CHUNK_SEGMENTS } from 'src/constants';
 
@@ -10,7 +9,8 @@ import MapCache from './MapCache';
 import { generateHeightMap, generateNoiseMap } from './terrainGenerator';
 import colorMap from './colorMap';
 
-// TODO optimize geometry creation by using BufferPlaneGeometry
+console.log('Init terrain worker');
+
 // TODO reduce cached data
 
 const mapCache = new MapCache('world1');

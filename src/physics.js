@@ -3,7 +3,7 @@ import { isEmpty } from 'lodash';
 
 import { ZERO_VECTOR3 } from 'src/utils/empty';
 
-const { Vector3 } = THREE; // it doesn't matter which Vector3 we use
+const Vector3 = THREE.Vector3; // it doesn't matter which Vector3 we use
 
 /** @type {import('@dimforge/rapier3d')} */
 export let RAPIER;

@@ -21,17 +21,19 @@ import Saver from 'src/Saver';
 import FlyControls from 'src/FlyControls';
 import physics, { loadPhysicsModule } from 'src/physics';
 
-const $game = document.querySelector('canvas#game');
-
 export default class Game {
+  initialized = false;
+
+  constructor(canvas) {
+    this.canvas = canvas;
+  }
+
   async preload() {
     await loadPhysicsModule();
   }
 
   init() {
     this.state = null;
-
-    this.canvas = $game;
 
     this.ui = new UI(this);
 
@@ -69,6 +71,16 @@ export default class Game {
 
     if (options.get('debug')) {
       this.scene.add(physics.debugMesh());
+
+      // add window hacks
+      window.GAME = this;
+      window.cheat = {
+        setPos: (x, y, z) => {
+          this.player.setPos(x, y, z);
+          this.loadTerrain().catch(console.error);
+        },
+        setTime: (hour) => this.setTime(hour),
+      };
     }
 
     // this.client = new Client(this.player);
@@ -143,13 +155,18 @@ export default class Game {
     this.effectComposer.render();
   };
 
-  async reload() {
+  async setup() {
     try {
-      this.dispose();
+      UI.setMode(GameState.LOADING);
+
+      if (this.initialized) this.dispose();
+      this.initialized = true;
+
+      await this.preload();
       await this.init();
       await this.start();
     } catch (err) {
-      console.error('reload error:', err);
+      console.error('setup error:', err);
       this.setState(GameState.ERROR);
     }
   }
@@ -299,7 +316,7 @@ export default class Game {
         const changed = options.checkChanged();
         for (const key in changed) {
           if (key === 'renderDist' || key === 'debug') {
-            this.reload();
+            this.setup();
             return;
           } else if (key === 'fog') {
             this.scene.fog = changed.fog
@@ -316,7 +333,7 @@ export default class Game {
       this.mainLoop.stop();
     } else if (newState === GameState.ERROR) {
       this.controls.unlockPointer();
-      this.mainLoop.stop();
+      this.mainLoop?.stop();
     }
 
     UI.setMode(newState);
@@ -456,18 +473,22 @@ export default class Game {
   }
 
   dispose() {
+    if (this.disposed) return console.warn('Game already disposed!');
+
+    this.disposed = true;
+
     // debug.disable();
-    this.mainLoop.stop();
+    this.mainLoop?.stop();
     this.player?.dispose();
     this.vehicle?.dispose();
     this.flyControls?.dispose();
-    this.ui.dispose();
-    this.chunkLoader.dispose();
-    this.saver.dispose();
-    this.scene.clear();
+    this.ui?.dispose();
+    this.chunkLoader?.dispose();
+    this.saver?.dispose();
+    this.scene?.clear();
     this.client?.dispose();
-    this.renderer.dispose();
-    this.controls.unbindControls();
+    this.renderer?.dispose();
+    this.controls?.unbindControls();
     physics.dispose();
 
     window.removeEventListener('resize', this.resize);

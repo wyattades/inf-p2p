@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 
-import TerrainWorker from 'src/terrain/terrain.worker';
 import Chunk from 'src/Chunk';
 import { Subject } from 'src/utils/async';
 
@@ -37,14 +36,19 @@ export default class ChunkLoader {
     this.chunkGroup = new THREE.Group();
     scene.add(this.chunkGroup);
 
-    this.worker = new TerrainWorker();
-    this.worker.onmessage = ({ data }) => {
+    // TODO: why is `terrain.worker.js` loaded twice?
+    this.worker = new Worker(
+      new URL('src/terrain/terrain.worker', import.meta.url),
+    );
+    this.worker.addEventListener('message', ({ data }) => {
       switch (data.cmd) {
         case 'terrain':
           this._receiveLoadChunk(data.x, data.z, data.attributes);
           break;
         default:
       }
+    });
+  }
     };
   }
 
@@ -186,5 +190,6 @@ export default class ChunkLoader {
 
   dispose() {
     this.unloadChunks();
+    this.worker.terminate();
   }
 }

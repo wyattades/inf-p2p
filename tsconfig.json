@@ -1,31 +1,27 @@
 {
-  "compileOnSave": false,
   "compilerOptions": {
-    "module": "esNext",
-    "moduleResolution": "node",
-    "declaration": false,
-    "emitDecoratorMetadata": true,
-    "esModuleInterop": true,
-    "experimentalDecorators": true,
-    "downlevelIteration": true,
-    "resolveJsonModule": true,
-    "sourceMap": true,
-    "strict": true,
-    "checkJs": false,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "lib": ["es6", "dom"],
-    "typeRoots": ["./node_modules/@types"],
     "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "typeRoots": ["./node_modules/@types"],
     "jsx": "preserve",
-    "noEmit": false,
+    "noEmit": true,
     "allowJs": true,
     "isolatedModules": true,
+    "incremental": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "tsBuildInfoFile": "tmp/.tsbuildinfo",
     "baseUrl": ".",
     "paths": {
       "*": ["./*", "./node_modules/*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
-  "exclude": ["babel.config.js", "node_modules", "dist"]
+  "exclude": ["tmp", "node_modules", "dist"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"]
 }
