@@ -101,11 +101,14 @@ export default class Chunk {
 
     const geometry = new THREE.BufferGeometry();
     for (const key of ['position', 'color', 'uv', 'normal']) {
-      const { array, itemSize, normalized } = attr[key];
-      geometry.setAttribute(
-        key,
-        new THREE.BufferAttribute(array, itemSize, normalized),
-      );
+      const { array, itemSize, normalized } = attr[key] || {};
+      if (array) {
+        geometry.setAttribute(
+          key,
+          new THREE.BufferAttribute(array, itemSize, normalized),
+        );
+        geometry.attributes[key].needsUpdate = true; // TODO: do we need this?
+      }
     }
 
     this.mesh = new THREE.Mesh(geometry, groundMaterial.clone());

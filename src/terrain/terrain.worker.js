@@ -22,9 +22,16 @@ const PLANE_GEOM = new PlaneGeometry(
   CHUNK_SEGMENTS - 1,
 );
 PLANE_GEOM.rotateX(-Math.PI / 2);
+PLANE_GEOM.setAttribute(
+  'color',
+  new BufferAttribute(
+    new Float32Array((CHUNK_SEGMENTS - 1) * (CHUNK_SEGMENTS - 1) * 18),
+    3,
+  ),
+);
 
 // convert array from row-major to column-major (for 2d square representation)
-const rotateArray = (from, to = []) => {
+const rowToColumnMajor = (from, to = new from.constructor(from.length)) => {
   const l = Math.sqrt(from.length) | 0;
 
   for (let i = 0; i < l; i++) {
@@ -44,13 +51,12 @@ const generateChunk = (x, z) => {
 
   const geom = PLANE_GEOM.clone();
 
-  for (let i = 0, j = 0; i < terrain.length; i++, j += 6) {
-    geom.vertices[i].y = terrain[i];
+  const positionAttr = geom.attributes.position;
+  for (let i = 0; i < terrain.length; i++) {
+    positionAttr.setY(i, terrain[i]);
   }
 
-  const bufferGeom = new BufferGeometry().fromGeometry(geom);
-
-  const colorsArray = bufferGeom.attributes.color.array;
+  const colorsArray = geom.attributes.color.array;
   for (let i = 0, j = 0; i < colors.length; i++, j += 9) {
     const c = colors[i];
     colorsArray[j] =
@@ -67,12 +73,9 @@ const generateChunk = (x, z) => {
         (c & 255) * 0.00390625;
   }
 
-  const heightsArray = rotateArray(
-    terrain,
-    new Float32Array(CHUNK_SEGMENTS * CHUNK_SEGMENTS),
-  );
+  const heightsArray = rowToColumnMajor(terrain);
 
-  return { ...bufferGeom.attributes, heightsArray };
+  return { ...geom.attributes, heightsArray };
 };
 
 const loadChunk = async ({ x, z }) => {
@@ -96,14 +99,11 @@ const loadChunk = async ({ x, z }) => {
     }
   }
 
-  const { position, color, uv, normal, heightsArray } = chunkData;
-
   self.postMessage({ cmd: 'terrain', x, z, attributes: chunkData }, [
-    position.array.buffer,
-    color.array.buffer,
-    uv.array.buffer,
-    normal.array.buffer,
-    heightsArray.buffer,
+    ...Object.values(chunkData)
+      .map((a) => a?.array?.buffer)
+      .filter(Boolean),
+    chunkData.heightsArray.buffer,
   ]);
 };
 

@@ -248,21 +248,11 @@ class Physics {
   }
 
   debugMesh() {
-    let mesh = this._debugMesh;
-    if (mesh) {
-      // clear vertices
-      mesh.geometry.vertices.length = 0;
-      mesh.geometry.colors.length = 0;
-    } else {
-      mesh = this._debugMesh = new THREE.LineSegments(
-        new THREE.Geometry(),
-        new THREE.LineBasicMaterial({ vertexColors: true }),
-      );
-    }
-
+    const points = [];
+    const colors = [];
     const addLine = (p1, p2, color) => {
-      mesh.geometry.vertices.push(p1, p2);
-      mesh.geometry.colors.push(color, color);
+      points.push(p1, p2);
+      colors.push(color, color);
     };
 
     for (const [p1, p2] of Object.values(this.debugForces)) {
@@ -307,8 +297,30 @@ class Physics {
       addLine(add(a2, x2), a2, COLORS.green);
     });
 
-    mesh.geometry.verticesNeedUpdate = true;
-    mesh.geometry.colorsNeedUpdate = true;
+    let mesh = this._debugMesh;
+    if (!mesh) {
+      mesh = this._debugMesh = new THREE.LineSegments(
+        new THREE.BufferGeometry(),
+        new THREE.LineBasicMaterial({ vertexColors: true }),
+      );
+      const bufferPoints = 1000; // arbitrary large buffer
+      mesh.geometry.setAttribute(
+        'position',
+        new THREE.BufferAttribute(new Float32Array(bufferPoints * 3), 3),
+      );
+      mesh.geometry.setAttribute(
+        'color',
+        new THREE.BufferAttribute(new Float32Array(bufferPoints * 3), 3),
+      );
+    }
+
+    mesh.geometry.attributes.position.array.fill(0);
+    mesh.geometry.attributes.position.copyVector3sArray(points);
+    mesh.geometry.attributes.position.needsUpdate = true;
+
+    mesh.geometry.attributes.color.array.fill(0);
+    mesh.geometry.attributes.color.copyColorsArray(colors);
+    mesh.geometry.attributes.color.needsUpdate = true;
 
     return mesh;
   }
