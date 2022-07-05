@@ -6,6 +6,7 @@ export const OPTIONS = [
   { label: 'Fog', key: 'fog', default: true },
   { label: 'Shadows', key: 'shadows', default: true },
   { label: 'Debug', key: 'debug', default: false },
+  { label: 'Show UI', key: 'show_ui', default: true },
   {
     label: 'Sensitivity',
     key: 'mouseSensitivity',

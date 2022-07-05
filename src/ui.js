@@ -17,6 +17,10 @@ const h = (tagName, attrs, ...children) => {
   return $el;
 };
 
+const removeChildren = (el) => {
+  while (el.firstChild) el.removeChild(el.firstChild);
+};
+
 export default class UI {
   static setMode(state) {
     let textOverlay = null;
@@ -62,8 +66,7 @@ export default class UI {
 
     this.em = new EventManager();
 
-    while ($options.firstChild) $options.removeChild($options.firstChild);
-
+    removeChildren($options);
     for (const opt of OPTIONS) {
       const type = opt.min == null ? 'checkbox' : 'range';
 
@@ -79,6 +82,9 @@ export default class UI {
             checked: value,
             onchange: (e) => {
               options.set(opt.key, e.target.checked);
+
+              // TODO: hack
+              if (opt.key === 'show_ui') this.toggleInfo(e.target.checked);
             },
           }),
           opt.label,
@@ -115,11 +121,14 @@ export default class UI {
       await this.game.setup();
     });
 
+    removeChildren(this.$info);
     for (const key in this.debugTextVals) {
       const $el = document.createElement('p');
       this.$info.appendChild($el);
       this.debugTextVals[key] = $el;
     }
+
+    this.toggleInfo(!!options.get('show_ui'));
   }
 
   set(key, val) {
@@ -130,17 +139,18 @@ export default class UI {
     } else console.info('Invalid option key:', key);
   }
 
-  key(keyCode, action) {
-    this.em.on(document, 'keydown', (e) => {
-      if (e.which === keyCode.charCodeAt(0)) action();
-    });
-  }
+  // key(keyCode, action) {
+  //   this.em.on(document, 'keydown', (e) => {
+  //     if (e.which === keyCode.charCodeAt(0)) action();
+  //   });
+  // }
 
   toggleMenu(active) {
     this.$menu.classList.toggle('hidden', active != null ? !active : undefined);
   }
 
   toggleInfo(active) {
+    options.set('show_ui', active);
     this.$info.classList.toggle('hidden', active != null ? !active : undefined);
   }
 
@@ -150,8 +160,7 @@ export default class UI {
     this.toggleMenu(false);
     this.toggleInfo(false);
 
-    while (this.$info.firstChild) this.$info.removeChild(this.$info.firstChild);
-    while (this.$options.firstChild)
-      this.$options.removeChild(this.$options.firstChild);
+    removeChildren(this.$info);
+    removeChildren(this.$options);
   }
 }
