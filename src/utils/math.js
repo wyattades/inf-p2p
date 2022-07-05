@@ -11,8 +11,10 @@ export const lerp = (vals, fraction) => {
 
 export const inverseLerp = (A, B, value) => (value - A) / (B - A);
 
-export const mean = (arr) =>
-  arr.reduce((sum, val) => sum + val, 0) / arr.length;
+export const mean = (arr) => {
+  if (arr.length === 0) return 0;
+  return arr.reduce((sum, val) => sum + val, 0) / arr.length;
+};
 
 export const clamp = (val, min, max) => {
   if (val < min) return min;

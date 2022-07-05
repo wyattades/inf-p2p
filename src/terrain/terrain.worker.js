@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-globals */
-
 import _ from 'lodash';
 import { BufferAttribute, PlaneGeometry } from 'three';
 
@@ -23,14 +21,13 @@ const PLANE_GEOM = new PlaneGeometry(
   CHUNK_SEGMENTS - 1,
 );
 PLANE_GEOM.rotateX(-Math.PI / 2);
-PLANE_GEOM.setAttribute(
-  'color',
-  new BufferAttribute(
-    new Uint8Array(PLANE_GEOM.attributes.position.count * 3),
-    // new Uint8Array((CHUNK_SEGMENTS - 1) * (CHUNK_SEGMENTS - 1) * 18),
-    3,
-    true,
+const colorItemSize = 3;
+const baseColorAttr = new BufferAttribute(
+  new Uint8Array(
+    (CHUNK_SEGMENTS - 1) * (CHUNK_SEGMENTS - 1) * colorItemSize * 6,
   ),
+  colorItemSize,
+  true,
 );
 
 // convert array from row-major to column-major (for 2d square representation)
@@ -48,31 +45,33 @@ const rowToColumnMajor = (from, to = new from.constructor(from.length)) => {
 const SEED = 'a-19sgfu4281';
 
 const generateChunk = (x, z) => {
-  const geom = PLANE_GEOM.clone();
+  let geom = PLANE_GEOM.clone();
 
   let heightMap = generateNoiseMap(SEED, x, z);
 
-  const colorsAttr = geom.attributes.color;
-  let j = 0;
-  // let i =0;
+  const colorAttr = baseColorAttr.clone();
+  const colorArray = colorAttr.array;
+  let ci = 0;
   for (const ch of iterateColorMap(heightMap)) {
-    colorsAttr.setXYZ(j, ch.r, ch.g, ch.b);
-    // colorsArray[j] = colorsArray[j + 3] = colorsArray[j + 6] = ch.r;
-    // colorsArray[j + 1] = colorsArray[j + 4] = colorsArray[j + 7] = ch.g;
-    // colorsArray[j + 2] = colorsArray[j + 5] = colorsArray[j + 8] = ch.b;
-    j++;
-    // j += 9;
+    colorArray[ci] = colorArray[ci + 3] = colorArray[ci + 6] = ch.r;
+    colorArray[ci + 1] = colorArray[ci + 4] = colorArray[ci + 7] = ch.g;
+    colorArray[ci + 2] = colorArray[ci + 5] = colorArray[ci + 8] = ch.b;
+    ci += 9;
   }
-  // geom.attributes.color.copyColorsArray(iterateColorMap(heightMap));
 
+  // mutates `heightMap`
   heightMap = generateHeightMap(heightMap);
 
-  // const indexAttr = geom.index; // `geom.clone()` doesn't clone `.index`
-
-  const positionAttr = geom.attributes.position;
-  for (let i = 0, len = heightMap.length; i < len; i++) {
-    positionAttr.setY(i, heightMap[i]);
+  const positionArray = geom.attributes.position.array;
+  for (let i = 0, j = 0, len = heightMap.length; i < len; i++, j += 3) {
+    // faster than `positionAttr.setY(i, heightMap[i])`
+    positionArray[j + 1] = heightMap[i];
   }
+
+  // this is required to support flat face colors (otherwise a face's color will be a blend of its vertex colors)
+  geom = geom.toNonIndexed();
+
+  geom.setAttribute('color', colorAttr);
 
   const heightsArray = rowToColumnMajor(heightMap);
 

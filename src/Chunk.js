@@ -33,13 +33,6 @@ const groundRayCaster = new THREE.Raycaster(
   new THREE.Vector3(0, -1, 0),
 );
 
-const PLANE_GEOM = new THREE.PlaneGeometry(
-  CHUNK_SEGMENTS * SEGMENT_SIZE,
-  CHUNK_SEGMENTS * SEGMENT_SIZE,
-  CHUNK_SEGMENTS - 1,
-  CHUNK_SEGMENTS - 1,
-);
-
 export default class Chunk {
   static SIZE = CHUNK_SEGMENTS * SEGMENT_SIZE;
 
@@ -115,23 +108,7 @@ export default class Chunk {
         // geometry.attributes[key].needsUpdate = true; // TODO: do we need this?
       }
     }
-    geometry.setIndex(PLANE_GEOM.index);
-
-    // if (indexAttr) {
-    //   geometry.setIndex(deserializeBufferAttr(indexAttr));
-    // }
-
-    // const geometry = new THREE.PlaneGeometry(
-    //   CHUNK_SEGMENTS * SEGMENT_SIZE,
-    //   CHUNK_SEGMENTS * SEGMENT_SIZE,
-    //   CHUNK_SEGMENTS - 1,
-    //   CHUNK_SEGMENTS - 1,
-    // );
-    // geometry.rotateX(-Math.PI / 2);
-    // geometry.setAttribute(
-    //   'color',
-    //   new THREE.BufferAttribute(attr.color.array, 3),
-    // );
+    // if (indexAttr) geometry.setIndex(deserializeBufferAttr(indexAttr));
 
     this.mesh = new THREE.Mesh(geometry, groundMaterial.clone());
     this.mesh.matrixAutoUpdate = false; // it's not gonna move

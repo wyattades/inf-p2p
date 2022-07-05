@@ -28,7 +28,7 @@ const getColorFromHeight = (h) => {
   for (const ch of COLOR_HEIGHTS) {
     if (h <= ch.d) return ch;
   }
-  return 0;
+  return COLOR_HEIGHTS[0];
 };
 
 export function* iterateColorMap(terrain) {
@@ -45,11 +45,11 @@ export function* iterateColorMap(terrain) {
       // const colorIndex = i * (CHUNK_SEGMENTS - 1) + j;
       // colors[colorIndex] = getColorFromHeight(mean([tr, bl, tl]));
       // colors[colorIndex + 1] = getColorFromHeight(mean([tr, bl, br]));
-      const ch = getColorFromHeight(mean([tr, br, bl, tl]));
+      const ch = getColorFromHeight(mean([tr, br, bl, tl].filter(Boolean)));
       // colors[colorIndex] = ch;
       // colors[colorIndex] = colors[colorIndex + 1] = ch;
       yield ch;
-      // yield ch;
+      yield ch;
     }
   }
 
