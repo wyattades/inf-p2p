@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 export default class MapCache {
-  constructor(name, version = 2) {
+  constructor(name, version = 3) {
     this.name = name;
     this.version = version;
     this.storeName = `chunks-${name}`;

@@ -1,13 +1,14 @@
 /* eslint-disable no-restricted-globals */
 
-import { isInteger } from 'lodash';
+import _ from 'lodash';
 import { BufferAttribute, PlaneGeometry } from 'three';
 
 import { SEGMENT_SIZE, CHUNK_SEGMENTS } from 'src/constants';
+import { serializeBufferAttr } from 'src/utils/geometry';
 
 import MapCache from './MapCache';
 import { generateHeightMap, generateNoiseMap } from './terrainGenerator';
-import colorMap from './colorMap';
+import { iterateColorMap } from './colorMap';
 
 console.log('Init terrain worker');
 
@@ -25,8 +26,10 @@ PLANE_GEOM.rotateX(-Math.PI / 2);
 PLANE_GEOM.setAttribute(
   'color',
   new BufferAttribute(
-    new Float32Array((CHUNK_SEGMENTS - 1) * (CHUNK_SEGMENTS - 1) * 18),
+    new Uint8Array(PLANE_GEOM.attributes.position.count * 3),
+    // new Uint8Array((CHUNK_SEGMENTS - 1) * (CHUNK_SEGMENTS - 1) * 18),
     3,
+    true,
   ),
 );
 
@@ -42,52 +45,57 @@ const rowToColumnMajor = (from, to = new from.constructor(from.length)) => {
   return to;
 };
 
+const SEED = 'a-19sgfu4281';
+
 const generateChunk = (x, z) => {
-  let terrain = generateNoiseMap(x, z);
-
-  const colors = colorMap(terrain);
-
-  terrain = generateHeightMap(terrain);
-
   const geom = PLANE_GEOM.clone();
 
+  let heightMap = generateNoiseMap(SEED, x, z);
+
+  const colorsAttr = geom.attributes.color;
+  let j = 0;
+  // let i =0;
+  for (const ch of iterateColorMap(heightMap)) {
+    colorsAttr.setXYZ(j, ch.r, ch.g, ch.b);
+    // colorsArray[j] = colorsArray[j + 3] = colorsArray[j + 6] = ch.r;
+    // colorsArray[j + 1] = colorsArray[j + 4] = colorsArray[j + 7] = ch.g;
+    // colorsArray[j + 2] = colorsArray[j + 5] = colorsArray[j + 8] = ch.b;
+    j++;
+    // j += 9;
+  }
+  // geom.attributes.color.copyColorsArray(iterateColorMap(heightMap));
+
+  heightMap = generateHeightMap(heightMap);
+
+  // const indexAttr = geom.index; // `geom.clone()` doesn't clone `.index`
+
   const positionAttr = geom.attributes.position;
-  for (let i = 0; i < terrain.length; i++) {
-    positionAttr.setY(i, terrain[i]);
+  for (let i = 0, len = heightMap.length; i < len; i++) {
+    positionAttr.setY(i, heightMap[i]);
   }
 
-  const colorsArray = geom.attributes.color.array;
-  for (let i = 0, j = 0; i < colors.length; i++, j += 9) {
-    const c = colors[i];
-    colorsArray[j] =
-      colorsArray[j + 3] =
-      colorsArray[j + 6] =
-        ((c >> 16) & 255) * 0.00390625;
-    colorsArray[j + 1] =
-      colorsArray[j + 4] =
-      colorsArray[j + 7] =
-        ((c >> 8) & 255) * 0.00390625;
-    colorsArray[j + 2] =
-      colorsArray[j + 5] =
-      colorsArray[j + 8] =
-        (c & 255) * 0.00390625;
-  }
+  const heightsArray = rowToColumnMajor(heightMap);
 
-  const heightsArray = rowToColumnMajor(terrain);
-
-  return { ...geom.attributes, heightsArray };
+  return {
+    ..._.mapValues(geom.attributes, serializeBufferAttr),
+    heightsArray,
+    // indexAttr: serializeBufferAttr(indexAttr),
+  };
 };
 
+// TODO: send error message on failure?
 const loadChunk = async ({ x, z }) => {
-  if (!isInteger(x) || !isInteger(z))
+  if (!_.isInteger(x) || !_.isInteger(z))
     return console.warn(`Invalid loadChunk args: ${x},${z}`);
+
+  console.debug('terrain.worker request loadChunk:', x, z);
 
   // Attempt to load from cache
   let chunkData;
   try {
     chunkData = await mapCache.loadChunk(x, z);
   } catch (err) {
-    console.warn('loadChunk', err);
+    console.warn('loadChunk error:', err);
   }
 
   if (!chunkData) {
@@ -95,21 +103,27 @@ const loadChunk = async ({ x, z }) => {
     try {
       await mapCache.saveChunk(x, z, chunkData);
     } catch (err) {
-      console.warn('saveChunk', err);
+      console.warn('saveChunk error:', err);
     }
   }
 
-  self.postMessage({ cmd: 'terrain', x, z, attributes: chunkData }, [
-    ...Object.values(chunkData)
-      .map((a) => a?.array?.buffer)
+  console.debug('terrain.worker sending chunk:', x, z);
+
+  self.postMessage(
+    { cmd: 'terrain', x, z, attributes: chunkData },
+    Object.values(chunkData)
+      .map((a) => a.buffer || a.array?.buffer)
       .filter(Boolean),
-    chunkData.heightsArray.buffer,
-  ]);
+  );
 };
 
 const clearCache = async () => {
+  console.debug('terrain.worker request clearCache');
+
   try {
     await mapCache.clear();
+
+    console.debug('terrain.worker clearCache complete');
   } catch (err) {
     console.warn('clearCache', err);
   }
@@ -121,21 +135,27 @@ const clearCache = async () => {
 // };
 
 self.onmessage = async ({ data }) => {
-  // console.log('terrain worker onmessage:', data);
+  // console.debug('terrain.worker onmessage:', data);
 
-  let res;
-  switch (data.cmd) {
-    // case 'loadChunks':
-    //   loadChunks(data);
-    //   break;
-    case 'loadChunk':
-      res = await loadChunk(data);
-      break;
-    case 'clearCache':
-      res = await clearCache();
-      break;
-    default:
-      throw new Error(`Unknown command: ${data.cmd}`);
+  let res = null,
+    error = null;
+  try {
+    switch (data.cmd) {
+      // case 'loadChunks':
+      //   loadChunks(data);
+      //   break;
+      case 'loadChunk':
+        res = await loadChunk(data);
+        break;
+      case 'clearCache':
+        res = await clearCache();
+        break;
+      default:
+        throw new Error(`Unknown command: ${data.cmd}`);
+    }
+  } catch (err) {
+    console.error('terrain.worker error:', err);
+    error = err;
   }
 
   if (data.cmdId != null)
@@ -143,5 +163,6 @@ self.onmessage = async ({ data }) => {
       cmd: 'worker_response',
       cmdId: data.cmdId,
       response: res,
+      error: error ? error.toString() : null,
     });
 };

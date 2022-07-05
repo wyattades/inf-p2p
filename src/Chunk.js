@@ -4,6 +4,7 @@ import { CHUNK_SEGMENTS, SEGMENT_SIZE } from 'src/constants';
 import options from 'src/options';
 import physics, { Body, RAPIER } from 'src/physics';
 import { ZERO_QUATERNION } from 'src/utils/empty';
+import { deserializeBufferAttr } from 'src/utils/geometry';
 
 // const groundMaterial = new THREE.MeshLambertMaterial({
 //   vertexColors: THREE.FaceColors,
@@ -30,6 +31,13 @@ const groundMaterial = new THREE.MeshPhongMaterial({
 const groundRayCaster = new THREE.Raycaster(
   new THREE.Vector3(0, 1000, 0),
   new THREE.Vector3(0, -1, 0),
+);
+
+const PLANE_GEOM = new THREE.PlaneGeometry(
+  CHUNK_SEGMENTS * SEGMENT_SIZE,
+  CHUNK_SEGMENTS * SEGMENT_SIZE,
+  CHUNK_SEGMENTS - 1,
+  CHUNK_SEGMENTS - 1,
 );
 
 export default class Chunk {
@@ -96,26 +104,40 @@ export default class Chunk {
   //   this.mesh.geometry.dispose();
   // }
 
-  setTerrain(attr) {
-    this.heightsArray = attr.heightsArray;
+  setTerrain({ heightsArray, indexAttr, ...attrs }) {
+    this.heightsArray = heightsArray;
 
     const geometry = new THREE.BufferGeometry();
-    for (const key of ['position', 'color', 'uv', 'normal']) {
-      const { array, itemSize, normalized } = attr[key] || {};
-      if (array) {
-        geometry.setAttribute(
-          key,
-          new THREE.BufferAttribute(array, itemSize, normalized),
-        );
-        geometry.attributes[key].needsUpdate = true; // TODO: do we need this?
+    for (const key in attrs) {
+      const attr = attrs[key];
+      if (attr) {
+        geometry.setAttribute(key, deserializeBufferAttr(attr));
+        // geometry.attributes[key].needsUpdate = true; // TODO: do we need this?
       }
     }
+    geometry.setIndex(PLANE_GEOM.index);
+
+    // if (indexAttr) {
+    //   geometry.setIndex(deserializeBufferAttr(indexAttr));
+    // }
+
+    // const geometry = new THREE.PlaneGeometry(
+    //   CHUNK_SEGMENTS * SEGMENT_SIZE,
+    //   CHUNK_SEGMENTS * SEGMENT_SIZE,
+    //   CHUNK_SEGMENTS - 1,
+    //   CHUNK_SEGMENTS - 1,
+    // );
+    // geometry.rotateX(-Math.PI / 2);
+    // geometry.setAttribute(
+    //   'color',
+    //   new THREE.BufferAttribute(attr.color.array, 3),
+    // );
 
     this.mesh = new THREE.Mesh(geometry, groundMaterial.clone());
     this.mesh.matrixAutoUpdate = false; // it's not gonna move
     this.mesh.position.copy(this.position);
 
-    this.mesh.castShadow = this.mesh.receiveShadow = options.get('shadows');
+    this.mesh.castShadow = this.mesh.receiveShadow = !!options.get('shadows');
 
     this.mesh.updateMatrix();
 

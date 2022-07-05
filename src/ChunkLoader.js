@@ -36,10 +36,14 @@ export default class ChunkLoader {
     this.chunkGroup = new THREE.Group();
     scene.add(this.chunkGroup);
 
-    // TODO: why is `terrain.worker.js` loaded twice?
+    // FIXME: workers are loaded twice in Firefox, not in Chrome
     this.worker = new Worker(
       new URL('src/terrain/terrain.worker', import.meta.url),
+      {
+        name: 'terrain_worker',
+      },
     );
+
     this.worker.addEventListener('message', ({ data }) => {
       switch (data.cmd) {
         case 'terrain':
@@ -54,12 +58,13 @@ export default class ChunkLoader {
   workerCmd(cmd, body, wait = false) {
     if (!wait) return this.worker.postMessage({ cmd, ...(body || {}) });
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const cmdId = this.cmdIdCounter++;
       const cb = ({ data }) => {
         if (data.cmd === 'worker_response' && data.cmdId === cmdId) {
           this.worker.removeEventListener('message', cb);
-          resolve(data.response);
+          if (data.error != null) reject(new Error(data.error));
+          else resolve(data.response);
         }
       };
       this.worker.addEventListener('message', cb);
@@ -104,6 +109,8 @@ export default class ChunkLoader {
   }
 
   _receiveLoadChunk(x, z, attr) {
+    console.debug('receiveLoadChunk:', x, z);
+
     const chunk = this.chunks[`${x},${z}`];
     // Chunks have the possibility of unloading before load is finished
     if (chunk) {

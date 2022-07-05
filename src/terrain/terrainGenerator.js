@@ -67,9 +67,9 @@ const genNoiseMap = ({
   return noiseMap;
 };
 
-export const generateNoiseMap = (chunkX, chunkZ) =>
+export const generateNoiseMap = (seed, chunkX, chunkZ) =>
   genNoiseMap({
-    seed: 'a-19sgfu4281',
+    seed,
     offset: {
       x: chunkZ * (CHUNK_SEGMENTS - 1),
       y: -chunkX * (CHUNK_SEGMENTS - 1),
