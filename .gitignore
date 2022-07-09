@@ -1,5 +1,6 @@
 # Custom
 dist/
+tmp/
 
 # Logs
 logs

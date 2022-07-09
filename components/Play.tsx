@@ -1,18 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
-import { useLatest } from 'react-use';
+import React, { useEffect, useRef } from 'react';
+import { useEvent, useUpdate } from 'react-use';
+
+import { GameProvider } from 'lib/hooks/game';
 
 import Game from 'src/Game';
 
-export const Play = () => {
+export const Play: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const canvas = useRef<HTMLCanvasElement>(null);
 
-  const [game, setGame] = useState<Game | null>(null);
-  const latestGame = useLatest(game);
+  const update = useUpdate();
+  const gameRef = useRef<Game | null>(null);
 
   const initGame = async () => {
-    const prev = latestGame.current;
+    const prev = gameRef.current;
     if (prev) {
-      setGame(null);
+      gameRef.current = null;
+      update();
       prev.dispose();
     }
 
@@ -21,12 +24,15 @@ export const Play = () => {
     if (!canvas.current) throw new Error('Missing game DOM container');
     const newGame = new GameClass(canvas.current);
     await newGame.setup();
-    setGame(newGame);
+    gameRef.current = newGame;
+    update();
   };
 
   useEffect(() => {
     initGame();
   }, []);
+
+  useEvent('reinitialized', update, gameRef.current?.events);
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
@@ -41,11 +47,11 @@ export const Play = () => {
         mounted = false;
       };
     }
-  }, [latestGame]);
+  }, []);
 
   useEffect(() => {
     return () => {
-      const endGame = latestGame.current;
+      const endGame = gameRef.current;
       if (endGame) {
         console.log('Unmount game');
         if (!endGame.disposed) endGame.dispose();
@@ -53,5 +59,14 @@ export const Play = () => {
     };
   }, []);
 
-  return <canvas ref={canvas} id="game" />;
+  const game = gameRef.current;
+
+  console.log('UPDATE');
+
+  return (
+    <GameProvider value={{ game }}>
+      <canvas ref={canvas} id="game" />
+      {game ? children : null}
+    </GameProvider>
+  );
 };

@@ -4,6 +4,7 @@
   "scripts": {
     "test": "echo 'No tests configured!'; exit",
     "lint": "eslint . --cache",
+    "typecheck": "tsc",
     "dev": "yarn && next dev",
     "build": "next build && next export -o dist",
     "start": "http-server -p 3000 dist",

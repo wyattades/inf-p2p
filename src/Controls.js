@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 
-import options from 'src/options';
-import * as GameState from 'src/GameState';
+import { GameState } from 'src/GameState';
 import EventManager from 'src/utils/EventManager';
 
 // TODO gamepad support, cars???
@@ -23,12 +22,13 @@ const DEFAULT_KEYBINDS = {
 };
 
 export default class Controls {
+  /** @param {import('src/Game')} game */
   constructor(game) {
     this.game = game;
 
     this.rotation = new THREE.Vector2(0, 0);
 
-    this.canvas = document.getElementById('game');
+    this.canvas = game.canvas;
 
     // TODO save in localStorage
     this.keybinds = {};
@@ -113,7 +113,7 @@ export default class Controls {
 
   onMousemove = (evt) => {
     if (this.game.state === GameState.PLAYING) {
-      const sensitivity = options.get('mouseSensitivity') / 3000;
+      const sensitivity = this.game.options.get('mouseSensitivity') / 3000;
 
       let mx = evt.movementX,
         my = evt.movementY;
@@ -133,8 +133,15 @@ export default class Controls {
     }
   };
 
+  /** @param {KeyboardEvent} evt */
+  allowKey(evt) {
+    if (evt.ctrlKey || evt.metaKey) return true;
+    if (/^F\d+$/.test(evt.key)) return true; // allow F<N> keys
+    return false;
+  }
+
   onKeydown = (evt) => {
-    if (!/^F\d+$/.test(evt.key)) evt.preventDefault(); // allow F<N> keys
+    if (!this.allowKey(evt)) evt.preventDefault();
 
     const bindName = this.keybinds[evt.which];
     if (bindName) {
@@ -145,7 +152,7 @@ export default class Controls {
   };
 
   onKeyup = (evt) => {
-    if (!/^F\d+$/.test(evt.key)) evt.preventDefault(); // allow F<N> keys
+    if (!this.allowKey(evt)) evt.preventDefault();
 
     const bindName = this.keybinds[evt.which];
     if (bindName) {

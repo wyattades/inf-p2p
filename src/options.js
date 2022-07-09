@@ -1,4 +1,5 @@
-import { fromPairs } from 'lodash';
+import { fromPairs, isEmpty } from 'lodash';
+import { EventEmitter } from 'events';
 
 export const OPTIONS = [
   { label: 'Render Distance', key: 'renderDist', min: 1, max: 5, default: 2 },
@@ -6,7 +7,7 @@ export const OPTIONS = [
   { label: 'Fog', key: 'fog', default: true },
   { label: 'Shadows', key: 'shadows', default: true },
   { label: 'Debug', key: 'debug', default: false },
-  { label: 'Show UI', key: 'show_ui', default: true },
+  { label: 'Show UI', key: 'show_ui', default: true, updateImmediate: true },
   {
     label: 'Sensitivity',
     key: 'mouseSensitivity',
@@ -27,8 +28,12 @@ export const OPTIONS = [
 //       input(type="checkbox" name=(opt.key))
 //       = opt.label
 
-class Options {
+export class Options {
+  events = new EventEmitter();
+
+  /** @type {Record<string, boolean | number | string>} */
   vals = fromPairs(OPTIONS.map((o) => [o.key, o.default]));
+  /** @type {Record<string, boolean | number | string>} */
   changed = {};
 
   constructor() {
@@ -37,6 +42,10 @@ class Options {
       const val = loaded[key];
       if (typeof val === typeof this.vals[key]) this.vals[key] = val;
     }
+  }
+
+  tentative() {
+    return { ...this.vals, ...this.changed };
   }
 
   load() {
@@ -51,23 +60,25 @@ class Options {
 
   save() {
     try {
-      localStorage.setItem(
-        'options',
-        JSON.stringify({ ...this.vals, ...this.changed }),
-      );
+      localStorage.setItem('options', JSON.stringify(this.tentative()));
     } catch {}
   }
 
   set(key, val) {
-    if (!(key in this.vals)) {
+    const opt = OPTIONS.find((o) => o.key === key);
+    if (!opt) {
       console.error('Invalid option:', key);
       return;
     }
 
-    if (this.vals[key] === val) delete this.changed[key];
+    if (opt.updateImmediate) {
+      this.vals[key] = val;
+    } else if (this.vals[key] === val) delete this.changed[key];
     else this.changed[key] = val;
 
     this.save();
+
+    this.events.emit('set_option', key, val);
   }
 
   get(key) {
@@ -76,7 +87,7 @@ class Options {
   }
 
   checkChanged() {
-    for (const _ in this.changed) {
+    if (!isEmpty(this.changed)) {
       Object.assign(this.vals, this.changed);
       const _changed = this.changed;
       this.changed = {};
@@ -85,5 +96,3 @@ class Options {
     return {};
   }
 }
-
-export default new Options();

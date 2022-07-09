@@ -1,3 +1,4 @@
+import { EventEmitter } from 'events';
 import MainLoop from 'mainloop.js';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
@@ -11,10 +12,10 @@ import ChunkLoader from 'src/ChunkLoader';
 import Controls from 'src/Controls';
 import Player from 'src/objects/Player';
 import UI from 'src/ui';
-import options from 'src/options';
+import { Options } from 'src/options';
 import Sky from 'src/objects/Sky';
 import Vehicle from 'src/objects/Vehicle';
-import * as GameState from 'src/GameState';
+import { GameState } from 'src/GameState';
 // import Client from 'src/Client';
 // import { loadModel } from 'src/utils/models';
 import Saver from 'src/Saver';
@@ -23,6 +24,13 @@ import physics, { loadPhysicsModule } from 'src/physics';
 
 export default class Game {
   initialized = false;
+  events = new EventEmitter();
+
+  /** @type {GameState | null} */
+  state = null;
+
+  /** @type {THREE.Scene} */
+  scene;
 
   constructor(canvas) {
     this.canvas = canvas;
@@ -35,7 +43,9 @@ export default class Game {
   init() {
     this.state = null;
 
-    this.ui = new UI(this);
+    this.options = new Options();
+
+    this.ui = new UI();
 
     this.camera = new THREE.PerspectiveCamera(
       45,
@@ -51,7 +61,7 @@ export default class Game {
 
     // debug.enable(this.scene);
 
-    this.chunkLoader = new ChunkLoader(this.scene, options.get('renderDist'));
+    this.chunkLoader = new ChunkLoader(this, this.options.get('renderDist'));
 
     this.controls = new Controls(this);
 
@@ -69,7 +79,7 @@ export default class Game {
     this.objectGroup = new THREE.Group();
     this.scene.add(this.objectGroup);
 
-    if (options.get('debug')) {
+    if (this.options.get('debug')) {
       this.scene.add(physics.debugMesh());
 
       // add window hacks
@@ -87,7 +97,6 @@ export default class Game {
 
     this.tick = 0;
     this.setTime(8);
-    this.setState(GameState.LOADING);
 
     // Resize camera and renderer on window resize
     window.addEventListener('resize', this.resize);
@@ -104,14 +113,19 @@ export default class Game {
       .setEnd(this.updateEnd);
   }
 
+  createFog() {
+    // if (this.scene.fog) this.scene.remove(this.scene.fog);
+
+    this.scene.fog = this.options.get('fog')
+      ? new THREE.FogExp2(0xe2f6ff, 0.007 / this.options.get('renderDist'))
+      : null;
+  }
+
   // Create world scene, add lights, skybox, and fog
   createScene() {
     this.scene = new THREE.Scene();
 
-    // Fog
-    this.scene.fog = options.get('fog')
-      ? new THREE.FogExp2(0xe2f6ff, 0.007 / options.get('renderDist'))
-      : null;
+    this.createFog();
 
     // Sky box
     this.sky = new Sky();
@@ -123,10 +137,10 @@ export default class Game {
     this.effectComposer?.reset();
 
     this.renderer = new THREE.WebGLRenderer({
-      antialias: !!options.get('antialias'),
+      antialias: !!this.options.get('antialias'),
       canvas: this.canvas,
     });
-    if (options.get('shadows')) {
+    if (this.options.get('shadows')) {
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.BasicShadowMap;
     }
@@ -157,14 +171,19 @@ export default class Game {
 
   async setup() {
     try {
-      UI.setMode(GameState.LOADING);
-
-      if (this.initialized) this.dispose();
+      const reinitialized = this.initialized;
+      if (reinitialized) this.dispose();
       this.initialized = true;
+      this.disposed = false;
+
+      this.state = null;
+      this.setState(GameState.LOADING);
 
       await this.preload();
       await this.init();
       await this.start();
+
+      if (reinitialized) this.events.emit('reinitialized');
     } catch (err) {
       console.error('setup error:', err);
       this.setState(GameState.ERROR);
@@ -190,7 +209,7 @@ export default class Game {
     this.dirLight = new THREE.DirectionalLight(0xfff4e5, 1);
 
     // FIXME:
-    // this.dirLight.castShadow = options.get('shadows');
+    // this.dirLight.castShadow = this.options.get('shadows');
 
     // const d = 50;
     // this.dirLight.shadow.camera.left = -d;
@@ -201,7 +220,7 @@ export default class Game {
     // this.dirLight.shadow.camera.far = 3500;
     // this.dirLight.shadow.bias = -0.0001;
 
-    if (options.get('debug'))
+    if (this.options.get('debug'))
       this.scene.add(new THREE.CameraHelper(this.dirLight.shadow.camera));
 
     this.scene.add(this.dirLight);
@@ -307,39 +326,34 @@ export default class Game {
     const oldState = this.state;
 
     this.state = newState;
+    this.events.emit('set_game_state', newState);
 
     if (newState === GameState.PLAYING) {
       // On unpause:
       if (oldState === GameState.PAUSED) {
-        this.mainLoop.start();
+        this.mainLoop?.start();
+
         // Update game if options changed
-        const changed = options.checkChanged();
-        for (const key in changed) {
-          if (key === 'renderDist' || key === 'debug') {
-            this.setup();
-            return;
-          } else if (key === 'fog') {
-            this.scene.fog = changed.fog
-              ? new THREE.FogExp2(0xe2f6ff, 0.002)
-              : null;
-          } else if (key === 'antialias' || key === 'shadows') {
-            this.createRenderer();
-          }
+        const changed = this.options?.checkChanged() || {};
+        if (changed.renderDist != null || changed.debug != null) {
+          this.setup();
+          return;
+        } else if (changed.fog != null) {
+          this.createFog();
+        } else if (changed.antialias != null || changed.shadows != null) {
+          this.createRenderer();
         }
       }
-      this.controls.lockPointer();
+      this.controls?.lockPointer();
     } else if (newState === GameState.PAUSED) {
-      this.controls.unlockPointer();
-      this.mainLoop.stop();
+      this.controls?.unlockPointer();
+      this.mainLoop?.stop();
     } else if (newState === GameState.ERROR) {
-      this.controls.unlockPointer();
+      this.controls?.unlockPointer();
       this.mainLoop?.stop();
     }
 
-    UI.setMode(newState);
-
-    this.ui.toggleMenu(newState === GameState.PAUSED); // TEMP
-    this.controls.clearPresses();
+    this.controls?.clearPresses();
   }
 
   enemyUpdate = (data) => {
@@ -376,7 +390,7 @@ export default class Game {
   }
 
   updateEnd = (fps, panic) => {
-    this.ui.set('FPS', fps);
+    this.ui.set('FPS', Math.round(fps));
 
     if (panic) {
       // TODO
@@ -440,9 +454,9 @@ export default class Game {
       }
 
       if (this.tick % 5 === 0) {
-        this.ui.set('x', followPosition.x);
-        this.ui.set('y', followPosition.y);
-        this.ui.set('z', followPosition.z);
+        this.ui.set('x', followPosition.x.toFixed(2));
+        this.ui.set('y', followPosition.y.toFixed(2));
+        this.ui.set('z', followPosition.z.toFixed(2));
       }
     }
 
@@ -452,7 +466,7 @@ export default class Game {
       this.ui.set('tick', this.tick.toString());
     }
 
-    if (options.get('debug') && this.tick % 5 === 0) {
+    if (this.options.get('debug') && this.tick % 5 === 0) {
       physics.debugMesh(); // just updates the geometry
     }
 
@@ -490,6 +504,9 @@ export default class Game {
     this.renderer?.dispose();
     this.controls?.unbindControls();
     physics.dispose();
+
+    // we need to listen to `reinitialized` event
+    // this.events.removeAllListeners();
 
     window.removeEventListener('resize', this.resize);
   }

@@ -1,4 +1,4 @@
-import _ from 'lodash';
+import { isInteger, mapValues } from 'lodash';
 import { BufferAttribute, PlaneGeometry } from 'three';
 
 import { SEGMENT_SIZE, CHUNK_SEGMENTS } from 'src/constants';
@@ -76,7 +76,7 @@ const generateChunk = (x, z) => {
   const heightsArray = rowToColumnMajor(heightMap);
 
   return {
-    ..._.mapValues(geom.attributes, serializeBufferAttr),
+    ...mapValues(geom.attributes, serializeBufferAttr),
     heightsArray,
     // indexAttr: serializeBufferAttr(indexAttr),
   };
@@ -84,7 +84,7 @@ const generateChunk = (x, z) => {
 
 // TODO: send error message on failure?
 const loadChunk = async ({ x, z }) => {
-  if (!_.isInteger(x) || !_.isInteger(z))
+  if (!isInteger(x) || !isInteger(z))
     return console.warn(`Invalid loadChunk args: ${x},${z}`);
 
   console.debug('terrain.worker request loadChunk:', x, z);

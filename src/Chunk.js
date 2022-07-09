@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 
 import { CHUNK_SEGMENTS, SEGMENT_SIZE } from 'src/constants';
-import options from 'src/options';
 import physics, { Body, RAPIER } from 'src/physics';
 import { ZERO_QUATERNION } from 'src/utils/empty';
 import { deserializeBufferAttr } from 'src/utils/geometry';
@@ -36,7 +35,8 @@ const groundRayCaster = new THREE.Raycaster(
 export default class Chunk {
   static SIZE = CHUNK_SEGMENTS * SEGMENT_SIZE;
 
-  constructor(group, x, z) {
+  constructor(game, group, x, z) {
+    this.game = game;
     this.group = group;
     this.x = x;
     this.z = z;
@@ -114,13 +114,14 @@ export default class Chunk {
     this.mesh.matrixAutoUpdate = false; // it's not gonna move
     this.mesh.position.copy(this.position);
 
-    this.mesh.castShadow = this.mesh.receiveShadow = !!options.get('shadows');
+    this.mesh.castShadow = this.mesh.receiveShadow =
+      !!this.game.options.get('shadows');
 
     this.mesh.updateMatrix();
 
     this.group.add(this.mesh);
 
-    if (options.get('debug')) {
+    if (this.game.options.get('debug')) {
       this.debugChunkBoundsMesh = new THREE.LineSegments(
         new THREE.EdgesGeometry(
           new THREE.BoxGeometry(Chunk.SIZE, 512, Chunk.SIZE),

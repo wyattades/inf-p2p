@@ -25,16 +25,17 @@ export default class ChunkLoader {
   }
 
   /**
-   * @param {import('three').Scene} scene
+   * @param {import('src/Game')} game
    * @param {number} renderDist
    */
-  constructor(scene, renderDist) {
-    this.scene = scene;
+  constructor(game, renderDist) {
+    this.game = game;
+    this.scene = game.scene;
     this.renderDist = Math.max(1, renderDist | 0);
     this.initialChunkAmount = (this.renderDist * 2 + 1) ** 2;
 
     this.chunkGroup = new THREE.Group();
-    scene.add(this.chunkGroup);
+    this.scene.add(this.chunkGroup);
 
     // FIXME: workers are loaded twice in Firefox, not in Chrome
     this.worker = new Worker(
@@ -98,7 +99,7 @@ export default class ChunkLoader {
     const key = `${x},${z}`;
     if (key in this.chunks) console.warn('Already requested chunk', x, z);
 
-    const chunk = new Chunk(this.chunkGroup, x, z);
+    const chunk = new Chunk(this.game, this.chunkGroup, x, z);
     this.chunks[key] = chunk;
     this.chunkCount++;
 

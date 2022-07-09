@@ -3,9 +3,6 @@
 import Peer from 'simple-peer';
 import { EventEmitter } from 'events';
 
-const $p2p = document.getElementById('p2p');
-const $text = $p2p.querySelector('textarea');
-
 const encodeUpdate = ({ position, velocity, rotation }) => {
   const data = [
     position.x,
@@ -40,34 +37,40 @@ const decodeUpdate = (dataString) => {
   return update;
 };
 
-export default class Client extends EventEmitter {
+export default class Client {
+  events = new EventEmitter();
+  updateSpeed = 32;
+  initiator = null;
+  peer = null;
+  text = '';
+
   constructor(player) {
-    super();
-
     this.player = player;
-
-    this.updateSpeed = 32;
   }
 
   init() {
-    this.initiator = false;
-
-    $p2p.addEventListener('submit', this.onSubmit);
+    this.initiator = null;
   }
 
-  onSubmit = (e) => {
-    e.preventDefault();
-    const val = $text.value.trim();
+  onSubmit = (val) => {
+    this.initiator = !!val;
 
-    if (!val) this.initiator = true;
+    const isPeer = !!this.peer;
+    if (!isPeer) this.createPeer();
 
-    this.createPeer();
-
-    if (val)
-      this.p.signal({
-        type: 'offer',
-        sdp: window.atob(val),
-      });
+    if (this.initiator) {
+      if (!isPeer) {
+        this.peer.signal({
+          type: 'offer',
+          sdp: window.atob(val),
+        });
+      } else {
+        this.peer.signal({
+          type: 'answer',
+          sdp: window.atob(val),
+        });
+      }
+    }
   };
 
   // init() {
@@ -100,46 +103,38 @@ export default class Client extends EventEmitter {
   //   this.p2p.emit('peer-msg', encodeUpdate(data));
   // }
 
-  createPeer() {
-    $p2p.removeEventListener('submit', this.onSubmit);
+  setText(val) {
+    this.text = val;
+    // set by React:
+    if (this.textEl) this.textEl.value = val;
+  }
 
-    this.p = new Peer({
+  createPeer() {
+    this.peer = new Peer({
       initiator: this.initiator,
     });
 
-    this.p.on('error', (err) => {
+    this.peer.on('error', (err) => {
       console.error('P2P Error', err);
       this.emit('error', err);
     });
 
-    this.p.on('signal', (data) => {
+    this.peer.on('signal', (data) => {
       if (data.type === 'offer' || data.type === 'answer') {
-        $text.value = window.btoa(data.sdp);
+        this.setText(window.btoa(data.sdp));
       }
     });
 
-    if (this.initiator) {
-      const onSubmit = (e) => {
-        $p2p.removeEventListener('submit', onSubmit);
-        e.preventDefault();
-        this.p.signal({
-          type: 'answer',
-          sdp: window.atob($text.value.trim()),
-        });
-      };
-      $p2p.addEventListener('submit', onSubmit);
-    }
-
-    this.p.on('connect', () => {
-      $text.value = '';
+    this.peer.on('connect', () => {
+      this.setText('');
       console.log('CONNECT', !!this.initiator);
       this.emit('connect');
       this.sendInterval = window.setInterval(() => {
-        this.p.send(encodeUpdate(this.player));
+        this.peer.send(encodeUpdate(this.player));
       }, this.updateSpeed);
     });
 
-    this.p.on('data', (data) => {
+    this.peer.on('data', (data) => {
       this.emit('update', decodeUpdate(data.toString()));
     });
   }
@@ -150,10 +145,13 @@ export default class Client extends EventEmitter {
       this.sendInterval = null;
     }
 
-    $text.value = '';
+    this.setText('');
 
-    this.removeAllListeners();
+    this.events.removeAllListeners();
 
-    if (this.p) this.p.destroy();
+    if (this.peer) {
+      this.peer.destroy();
+      this.peer = null;
+    }
   }
 }

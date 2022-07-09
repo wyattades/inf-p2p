@@ -1,8 +1,8 @@
-import _ from 'lodash';
+import { pick } from 'lodash';
 import { BufferAttribute } from 'three';
 
 export const serializeBufferAttr = (attr: THREE.BufferAttribute) => {
-  return _.pick(attr, 'array', 'itemSize', 'normalized');
+  return pick(attr, 'array', 'itemSize', 'normalized');
 };
 
 type SerializedBufferAttribute = ReturnType<typeof serializeBufferAttr>;
