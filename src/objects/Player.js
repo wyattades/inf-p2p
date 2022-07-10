@@ -1,7 +1,6 @@
 import * as THREE from 'three';
-import { isEmpty } from 'lodash';
 
-import physics, { Body, RAPIER } from 'src/physics';
+import { Body, RAPIER } from 'src/physics';
 
 // TODO seperate keyevents, player, and physics
 
@@ -36,7 +35,9 @@ export default class Player {
     this.position = this.object.position;
     this.rotation = this.object.rotation;
 
-    this.body = new Body(this.object, physics.world, { lockRotation: true });
+    this.body = new Body(this.object, this.game.physics, {
+      lockRotation: true,
+    });
     this.body.addCollider(
       RAPIER.ColliderDesc.capsule(
         Math.max(0, playerHeight / 2 - playerWidth / 2),
@@ -46,14 +47,15 @@ export default class Player {
         .setRestitution(restitution), // bounciness
     );
 
-    this.floorColliderHandle = this.body.addCollider(
-      RAPIER.ColliderDesc.ball(floorColliderDist)
-        .setIsSensor(true)
-        .setTranslation({ x: 0, y: -playerHeight / 2, z: 0 }),
-    ).handle;
+    // sensor and heightmap are slow together: https://github.com/dimforge/rapier/issues/332
+    // this.floorColliderHandle = this.body.addCollider(
+    //   RAPIER.ColliderDesc.ball(floorColliderDist)
+    //     .setSensor(true)
+    //     .setTranslation(0, -playerHeight / 2, 0),
+    // ).handle;
 
     // this.floorSensor.registerContactListener();
-    this.body.registerContactListener();
+    // this.body.registerContactListener();
   }
 
   setPos(x, y, z) {
@@ -74,7 +76,7 @@ export default class Player {
   onGround() {
     // FIXME: for some reason proximity events are not emitted when colliding with terrain
     // (static bodies) so we need to use the getHeightAt code below
-    if (physics.isProximitied(this.floorColliderHandle)) return true;
+    // if (this.game.physics.isProximitied(this.floorColliderHandle)) return true;
 
     const groundHeight = this.game.chunkLoader.getHeightAt(
       this.position.x,
@@ -136,7 +138,8 @@ export default class Player {
 
     motion.setLength(onGround ? moveForce : moveForce * 0.2);
 
-    this.body.rigidBody.applyForce(motion, true);
+    this.body.rigidBody.resetForces();
+    this.body.rigidBody.addForce(motion);
 
     const linVel = this.body.rigidBody.linvel();
     this.body.rigidBody.setLinvel(clampXZ(linVel, maxSpeed));

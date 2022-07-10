@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { isEmpty } from 'lodash';
 
 import { ZERO_VECTOR3 } from 'src/utils/empty';
 
@@ -7,9 +6,6 @@ const Vector3 = THREE.Vector3; // it doesn't matter which Vector3 we use
 
 /** @type {import('@dimforge/rapier3d')} */
 export let RAPIER;
-
-/** @type {Physics} */
-let physics;
 
 export const loadPhysicsModule = async () => {
   RAPIER = await import('@dimforge/rapier3d');
@@ -20,13 +16,13 @@ export const GRAVITY = -9.82 * 8;
 export class Body {
   /**
    * @param {Pick<import('three').Object3D, 'position' | 'quaternion'>} obj
-   * @param {import('@dimforge/rapier3d').World} world
+   * @param {Physics} physics
    */
   constructor(
     obj,
-    world,
+    physics,
     {
-      bodyStatus = RAPIER.BodyStatus.Dynamic,
+      bodyType = RAPIER.RigidBodyType.Dynamic,
       lockRotation = false,
       lockTranslation = false,
       angularDamping = null,
@@ -34,13 +30,13 @@ export class Body {
       mass = null,
     } = {},
   ) {
-    this.world = world;
+    this.world = physics.world;
 
-    let desc = new RAPIER.RigidBodyDesc(bodyStatus)
-      .setTranslation(obj.position)
+    let desc = new RAPIER.RigidBodyDesc(bodyType)
+      .setTranslation(...obj.position.toArray())
       .setRotation(obj.quaternion);
 
-    if (mass != null) desc = desc.setMass(mass, false);
+    if (mass != null) desc = desc.setAdditionalMass(mass);
     if (angularDamping != null && angularDamping >= 0)
       desc = desc.setAngularDamping(angularDamping);
     if (linearDamping != null && linearDamping >= 0)
@@ -50,11 +46,11 @@ export class Body {
 
     // .setPrincipalAngularInertia({ x: 0, y: 0, z: 0 }, true, false, false),
 
-    this.rigidBody = world.createRigidBody(desc);
+    this.rigidBody = this.world.createRigidBody(desc);
   }
 
   addCollider(colliderDesc) {
-    return this.world.createCollider(colliderDesc, this.rigidBody.handle);
+    return this.world.createCollider(colliderDesc, this.rigidBody);
   }
 
   getSpeed() {
@@ -66,7 +62,7 @@ export class Body {
   get colliders() {
     const c = [];
     for (let i = 0, l = this.rigidBody.numColliders(); i < l; i++)
-      c.push(this.world.colliders.get(this.rigidBody.collider(i)));
+      c.push(this.rigidBody.collider(i));
     return c;
   }
 
@@ -85,12 +81,12 @@ export class Body {
     if (!excludeRotation) this.rigidBody.setRotation(obj.quaternion);
   }
 
-  registerContactListener() {
-    physics.registerContactListener(this.rigidBody.handle);
-  }
-  unregisterContactListener() {
-    physics.unregisterContactListener(this.rigidBody.handle);
-  }
+  // registerContactListener() {
+  //   physics.registerContactListener(this.rigidBody.handle);
+  // }
+  // unregisterContactListener() {
+  //   physics.unregisterContactListener(this.rigidBody.handle);
+  // }
 
   getRotation() {
     return this.rigidBody.rotation();
@@ -120,7 +116,7 @@ export class Body {
   // }
 
   dispose() {
-    this.unregisterContactListener();
+    // this.unregisterContactListener();
     // removes the RigidBody and Colliders
     this.world.removeRigidBody(this.rigidBody);
     this.rigidBody = null;
@@ -147,47 +143,55 @@ const COLORS = {
   yellow: new THREE.Color(0xffff00),
 };
 
-class Physics {
-  init() {
+export class Physics {
+  constructor() {
     const gravity = new Vector3(0.0, GRAVITY, 0.0);
 
-    this.eventQueue = new RAPIER.EventQueue(true);
+    // this.eventQueue = new RAPIER.EventQueue(true);
 
     this.world = new RAPIER.World(gravity);
   }
 
-  contacts = {};
-  proximities = {};
+  // contacts = {};
+  // proximities = {};
 
-  registerContactListener(handle) {
-    this.contacts[handle] = {};
-  }
-  unregisterContactListener(handle) {
-    delete this.contacts[handle];
-  }
+  // registerContactListener(handle) {
+  //   this.contacts[handle] = {};
+  // }
+  // unregisterContactListener(handle) {
+  //   delete this.contacts[handle];
+  // }
 
-  getContacts(handle) {
-    return this.contacts[handle];
-  }
+  // getContacts(handle) {
+  //   return this.contacts[handle];
+  // }
 
-  handleContactEvent = (body1, body2, isStarted) => {
-    // if (body1 === window.FFF || body2 === window.FFF)
-    //   console.log('cont', body1, body2, isStarted);
+  // /**
+  //  * @type {Parameters<import('@dimforge/rapier3d').EventQueue['drainCollisionEvents']>[0]}
+  //  */
+  // handleCollisionEvent = (body1, body2, isStarted) => {
+  //   // if (body1 === window.FFF || body2 === window.FFF)
+  //   //   console.log('cont', body1, body2, isStarted);
 
-    let changed = false;
-    if (body1 in this.contacts) {
-      changed = true;
-      if (isStarted) this.contacts[body1][body2] = true;
-      else delete this.contacts[body1][body2];
-    }
-    if (body2 in this.contacts) {
-      changed = true;
-      if (isStarted) this.contacts[body2][body1] = true;
-      else delete this.contacts[body2][body1];
-    }
+  //   let changed = false;
+  //   if (body1 in this.contacts) {
+  //     changed = true;
+  //     if (isStarted) this.contacts[body1][body2] = true;
+  //     else delete this.contacts[body1][body2];
+  //   }
+  //   if (body2 in this.contacts) {
+  //     changed = true;
+  //     if (isStarted) this.contacts[body2][body1] = true;
+  //     else delete this.contacts[body2][body1];
+  //   }
 
-    if (changed) this.printContacts(this.contacts);
-  };
+  //   if (changed) this.printContacts(this.contacts);
+  // };
+
+  // // TODO
+  // printContacts(contacts) {
+  //   console.log(contacts);
+  // }
 
   printPairs(obj) {
     const a = new Set();
@@ -196,47 +200,48 @@ class Physics {
     if (a.size > 0) console.log(...a.keys());
   }
 
+  // TODO
   isProximitied(colliderHandle) {
-    return !isEmpty(this.proximities[colliderHandle]);
+    return false;
+    // return !isEmpty(this.proximities[colliderHandle]);
   }
 
-  handleProximityEvent = (collider1, collider2, prevProx, prox) => {
-    // console.log('prox', collider1, collider2, prevProx, prox);
-    // eslint-disable-next-line default-case
-    switch (prevProx) {
-      case RAPIER.Proximity.Intersecting:
-        if (prox === RAPIER.Proximity.Disjoint) {
-          delete (this.proximities[collider1] ||= {})[collider2];
-          delete (this.proximities[collider2] ||= {})[collider1];
-        } else {
-          (this.proximities[collider1] ||= {})[collider2] = true;
-          (this.proximities[collider2] ||= {})[collider1] = true;
-        }
-        break;
-      case RAPIER.Proximity.WithinMargin:
-        if (prox === RAPIER.Proximity.Disjoint) {
-          delete (this.proximities[collider1] ||= {})[collider2];
-          delete (this.proximities[collider2] ||= {})[collider1];
-        } else {
-          (this.proximities[collider1] ||= {})[collider2] = true;
-          (this.proximities[collider2] ||= {})[collider1] = true;
-        }
-        break;
-      case RAPIER.Proximity.Disjoint:
-        (this.proximities[collider1] ||= {})[collider2] = true;
-        (this.proximities[collider2] ||= {})[collider1] = true;
-        break;
-    }
-  };
+  // handleProximityEvent = (collider1, collider2, prevProx, prox) => {
+  //   // console.log('prox', collider1, collider2, prevProx, prox);
+  //   // eslint-disable-next-line default-case
+  //   switch (prevProx) {
+  //     case RAPIER.Proximity.Intersecting:
+  //       if (prox === RAPIER.Proximity.Disjoint) {
+  //         delete (this.proximities[collider1] ||= {})[collider2];
+  //         delete (this.proximities[collider2] ||= {})[collider1];
+  //       } else {
+  //         (this.proximities[collider1] ||= {})[collider2] = true;
+  //         (this.proximities[collider2] ||= {})[collider1] = true;
+  //       }
+  //       break;
+  //     case RAPIER.Proximity.WithinMargin:
+  //       if (prox === RAPIER.Proximity.Disjoint) {
+  //         delete (this.proximities[collider1] ||= {})[collider2];
+  //         delete (this.proximities[collider2] ||= {})[collider1];
+  //       } else {
+  //         (this.proximities[collider1] ||= {})[collider2] = true;
+  //         (this.proximities[collider2] ||= {})[collider1] = true;
+  //       }
+  //       break;
+  //     case RAPIER.Proximity.Disjoint:
+  //       (this.proximities[collider1] ||= {})[collider2] = true;
+  //       (this.proximities[collider2] ||= {})[collider1] = true;
+  //       break;
+  //   }
+  // };
 
   lastError = null;
   update(_delta, _tick) {
-    // if (tick % 2 !== 0) return;
+    // this.world.step(this.eventQueue);
+    this.world.step();
 
-    this.world.step(this.eventQueue);
-
-    this.eventQueue.drainContactEvents(this.handleContactEvent);
-    this.eventQueue.drainProximityEvents(this.handleProximityEvent);
+    // this.eventQueue.drainCollisionEvents(this.handleCollisionEvent);
+    // this.eventQueue.drainProximityEvents(this.handleProximityEvent);
   }
 
   debugForces = {};
@@ -259,14 +264,14 @@ class Physics {
       addLine(p1, p2, COLORS.yellow);
     }
 
-    const bodies = {};
+    // const bodies = {};
 
-    this.world.bodies.forEachRigidBody((body) => {
+    this.world.bodies.forEach((body) => {
       if (body.isDynamic()) {
         const position = body.translation();
-        const rotation = body.rotation();
+        // const rotation = body.rotation();
 
-        bodies[body.handle] = { position, rotation };
+        // bodies[body.handle] = { position, rotation };
 
         // for (let i = 0, l = body.numColliders(); i < l; i++) {
         //   const collider = this.world.colliders.get(body.collider(i));
@@ -280,22 +285,23 @@ class Physics {
       }
     });
 
-    this.world.joints.forEachJoint((joint) => {
-      const b1 = bodies[joint.bodyHandle1()];
-      const b2 = bodies[joint.bodyHandle2()];
+    // TODO: `axis1()` DNE
+    // this.world.impulseJoints.forEach((joint) => {
+    //   const b1 = joint.body1();
+    //   const b2 = joint.body2();
 
-      if (!b1 || !b2) return;
+    //   if (!b1 || !b2) return;
 
-      const a1 = add(b1.position, rot(joint.anchor1(), b1.rotation));
-      const a2 = add(b2.position, rot(joint.anchor2(), b2.rotation));
-      // a1 and a2 should be the same!
+    //   const a1 = add(b1.translation(), rot(joint.anchor1(), b1.rotation()));
+    //   const a2 = add(b2.translation(), rot(joint.anchor2(), b2.rotation()));
+    //   // a1 and a2 should be the same!
 
-      const x1 = rot(joint.axis1(), b1.rotation);
-      const x2 = rot(joint.axis2(), b2.rotation);
+    //   const x1 = rot(joint.axis1(), b1.rotation());
+    //   const x2 = rot(joint.axis2(), b2.rotation());
 
-      addLine(add(a1, x1), a1, COLORS.orange);
-      addLine(add(a2, x2), a2, COLORS.green);
-    });
+    //   addLine(add(a1, x1), a1, COLORS.orange);
+    //   addLine(add(a2, x2), a2, COLORS.green);
+    // });
 
     let mesh = this._debugMesh;
     if (!mesh) {
@@ -328,10 +334,6 @@ class Physics {
   dispose() {
     this.eventQueue?.free();
     this.world?.free();
-    this.contacts = {};
+    // this.contacts = {};
   }
 }
-
-physics = new Physics();
-
-export default physics;

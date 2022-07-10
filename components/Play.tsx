@@ -61,8 +61,6 @@ export const Play: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const game = gameRef.current;
 
-  console.log('UPDATE');
-
   return (
     <GameProvider value={{ game }}>
       <canvas ref={canvas} id="game" />

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 import { CHUNK_SEGMENTS, SEGMENT_SIZE } from 'src/constants';
-import physics, { Body, RAPIER } from 'src/physics';
+import { Body, RAPIER } from 'src/physics';
 import { ZERO_QUATERNION } from 'src/utils/empty';
 import { deserializeBufferAttr } from 'src/utils/geometry';
 
@@ -35,6 +35,12 @@ const groundRayCaster = new THREE.Raycaster(
 export default class Chunk {
   static SIZE = CHUNK_SEGMENTS * SEGMENT_SIZE;
 
+  /**
+   * @param {import('src/Game').default} game
+   * @param {import(THREE.Group)} group
+   * @param {number} x
+   * @param {number} z
+   */
   constructor(game, group, x, z) {
     this.game = game;
     this.group = group;
@@ -68,6 +74,8 @@ export default class Chunk {
   }
 
   enablePhysics() {
+    const physics = this.game.physics;
+
     if (!physics.world)
       return console.warn('Chunk#enablePhysics: Physics not loaded yet');
 
@@ -77,8 +85,8 @@ export default class Chunk {
     if (!this.heightsArray)
       return console.warn('Chunk#enablePhysics: terrain data not loaded yet');
 
-    this.body = new Body(this, physics.world, {
-      bodyStatus: RAPIER.BodyStatus.Static,
+    this.body = new Body(this, physics, {
+      bodyType: RAPIER.RigidBodyType.Static,
     });
     this.body.addCollider(
       RAPIER.ColliderDesc.heightfield(

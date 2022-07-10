@@ -12,7 +12,7 @@
     "build-deploy": "npm run build && npm run deploy"
   },
   "dependencies": {
-    "@dimforge/rapier3d": "^0.2.13",
+    "@dimforge/rapier3d": "^0.9.0",
     "bezier-easing": "^2.1.0",
     "idb": "^6.0.0",
     "lodash": "^4.17.21",
@@ -24,7 +24,7 @@
     "sass": "^1.53.0",
     "seedrandom": "^3.0.5",
     "simple-peer": "^9.9.3",
-    "simplex-noise": "^2.4.0",
+    "simplex-noise": "^3.0.1",
     "three": "^0.142.0"
   },
   "devDependencies": {

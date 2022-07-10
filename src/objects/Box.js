@@ -1,9 +1,12 @@
 import * as THREE from 'three';
 
-import physics, { Body, RAPIER } from 'src/physics';
+import { Body, RAPIER } from 'src/physics';
 
 export default class Box {
-  constructor(pos, size = 3) {
+  /**
+   * @param {import('src/Game').default} game
+   */
+  constructor(game, pos, size = 3) {
     const geometry = new THREE.BoxGeometry(size, size, size, 1, 1, 1);
 
     const material = new THREE.MeshPhongMaterial({
@@ -14,7 +17,9 @@ export default class Box {
     this.mesh.position.copy(pos);
     // mesh.quaternion.copy(quat);
 
-    this.body = new Body(this.mesh, physics.world);
+    this.mesh.gameObject = this;
+
+    this.body = new Body(this.mesh, game.physics);
     this.body.addCollider(
       RAPIER.ColliderDesc.cuboid(size * 0.5, size * 0.5, size * 0.5),
     );

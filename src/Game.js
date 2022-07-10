@@ -1,3 +1,4 @@
+import { memoize } from 'lodash';
 import { EventEmitter } from 'events';
 import MainLoop from 'mainloop.js';
 import * as THREE from 'three';
@@ -20,7 +21,12 @@ import { GameState } from 'src/GameState';
 // import { loadModel } from 'src/utils/models';
 import Saver from 'src/Saver';
 import FlyControls from 'src/FlyControls';
-import physics, { loadPhysicsModule } from 'src/physics';
+import { Physics, loadPhysicsModule } from 'src/physics';
+// import Box from 'src/objects/Box';
+
+const SIMULATION_SPEED = 1000 / 60;
+
+const canReadStorage = memoize(() => !!window.navigator?.storage?.estimate);
 
 export default class Game {
   initialized = false;
@@ -31,6 +37,9 @@ export default class Game {
 
   /** @type {THREE.Scene} */
   scene;
+
+  /** @type {Physics} */
+  physics;
 
   constructor(canvas) {
     this.canvas = canvas;
@@ -57,7 +66,7 @@ export default class Game {
     this.createScene();
     this.createRenderer();
 
-    physics.init();
+    this.physics = new Physics();
 
     // debug.enable(this.scene);
 
@@ -80,7 +89,7 @@ export default class Game {
     this.scene.add(this.objectGroup);
 
     if (this.options.get('debug')) {
-      this.scene.add(physics.debugMesh());
+      this.scene.add(this.physics.debugMesh());
 
       // add window hacks
       window.GAME = this;
@@ -101,14 +110,15 @@ export default class Game {
     // Resize camera and renderer on window resize
     window.addEventListener('resize', this.resize);
 
-    this.mainLoop = MainLoop.setUpdate((delta) => {
-      try {
-        this.update(1 / delta);
-      } catch (err) {
-        console.error('update error', err);
-        this.setState(GameState.ERROR);
-      }
-    })
+    this.mainLoop = MainLoop.setSimulationTimestep(SIMULATION_SPEED)
+      .setUpdate((delta) => {
+        try {
+          this.update(1 / delta);
+        } catch (err) {
+          console.error('update error', err);
+          this.setState(GameState.ERROR);
+        }
+      })
       .setDraw(this.render)
       .setEnd(this.updateEnd);
   }
@@ -406,10 +416,11 @@ export default class Game {
       this.player?.update(delta, this.tick);
     }
     this.vehicle?.update(delta, this.tick);
-    for (const obj of this.objectGroup.children) obj.update(delta, this.tick);
+    for (const obj of this.objectGroup.children)
+      obj.gameObject.update(delta, this.tick);
 
     // Physics
-    physics.update(delta, this.tick);
+    this.physics.update(delta, this.tick);
 
     // spawn random box
     // if (this.tick % 120 === 0) {
@@ -467,10 +478,10 @@ export default class Game {
     }
 
     if (this.options.get('debug') && this.tick % 5 === 0) {
-      physics.debugMesh(); // just updates the geometry
+      this.physics.debugMesh(); // just updates the geometry
     }
 
-    if (this.tick % 200 === 0 && window.navigator?.storage?.estimate) {
+    if (this.tick % 200 === 0 && canReadStorage()) {
       // console.log(this.renderer.info.memory.geometries);
       navigator.storage.estimate().then(({ quota, usage }) => {
         this.ui.set(
@@ -503,7 +514,7 @@ export default class Game {
     this.client?.dispose();
     this.renderer?.dispose();
     this.controls?.unbindControls();
-    physics.dispose();
+    this.physics?.dispose();
 
     // we need to listen to `reinitialized` event
     // this.events.removeAllListeners();

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-import physics, { Body, RAPIER } from 'src/physics';
+import { Body, RAPIER } from 'src/physics';
 import { ZERO_QUATERNION } from 'src/utils/empty';
 
 // wheel indices
@@ -67,6 +67,7 @@ class Wheel {
    * @param {THREE.Vector3} offset
    */
   constructor(vehicle, index, radius, width, offset) {
+    this.game = vehicle.game;
     this.vehicle = vehicle;
     this.index = index;
     this.radius = radius;
@@ -99,7 +100,7 @@ class Wheel {
     this.scene.add(mesh);
     // this.chassisMesh.add(mesh);
 
-    const body = (this.body = new Body(mesh, physics.world, {
+    const body = (this.body = new Body(mesh, this.game.physics, {
       angularDamping: wheelAngularDamping,
     }));
     body.addCollider(
@@ -108,11 +109,11 @@ class Wheel {
         .setFriction(wheelFriction),
     );
 
-    this.joint = physics.world.createJoint(
-      RAPIER.JointParams.revolute(
+    this.joint = this.game.physics.world.createImpulseJoint(
+      RAPIER.JointData.revolute(
         offset,
         new THREE.Vector3(dir, 0, 0),
-        new THREE.Vector3(0, 0, 0),
+        // new THREE.Vector3(0, 0, 0),
         new THREE.Vector3(-dir, 0, 0).applyQuaternion(mesh.quaternion),
       ),
       this.vehicle.chassisBody.rigidBody,
@@ -161,13 +162,13 @@ class Wheel {
 
       wheelBody.rigidBody.applyTorqueImpulse(torqueVec, true);
 
-      physics.updateDebugForce(
+      this.game.physics.updateDebugForce(
         wheelBody.rigidBody.handle,
         wheelMesh.position.clone(),
         torqueVec,
       );
     } else {
-      physics.updateDebugForce(wheelBody.rigidBody.handle, null);
+      this.game.physics.updateDebugForce(wheelBody.rigidBody.handle, null);
     }
   }
 
@@ -265,7 +266,7 @@ export default class Vehicle {
 
     const chassisBody = (this.chassisBody = new Body(
       chassisMesh,
-      physics.world,
+      this.game.physics,
     ));
     chassisBody.addCollider(
       RAPIER.ColliderDesc.cuboid(
