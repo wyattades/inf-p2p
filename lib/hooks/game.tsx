@@ -3,14 +3,14 @@ import { createContext, useContext } from 'react';
 import { useSubscribe } from 'lib/hooks/useSubscribe';
 import type Game from 'src/Game';
 
-const GameCtx = createContext<{ game: Game } | null>(null);
+const GameCtx = createContext<{ game: Game | null } | null>(null);
 
 export const GameProvider = GameCtx.Provider;
 
 export const useGame = () => {
-  const gctx = useContext(GameCtx);
-  if (!gctx) throw new Error('Missing GameProvider');
-  return gctx.game;
+  const game = useContext(GameCtx)?.game;
+  if (!game) throw new Error('Missing GameProvider');
+  return game;
 };
 
 export const useGameState = () => {
