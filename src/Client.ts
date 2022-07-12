@@ -1,9 +1,18 @@
 // import P2P from 'socket.io-p2p';
 // import io from 'socket.io-client';
-import Peer from 'simple-peer';
+import Peer, { Instance as SimplePeer } from 'simple-peer';
 import { EventEmitter } from 'events';
 
-const encodeUpdate = ({ position, velocity, rotation }) => {
+import type Player from 'src/objects/Player';
+import { toNum } from 'src/utils/math';
+
+type UpdatePayload = {
+  position: { x: number; y: number; z: number };
+  velocity: { x: number; y: number; z: number };
+  rotation: { x: number; y: number };
+};
+
+const encodeUpdate = ({ position, velocity, rotation }: UpdatePayload) => {
   const data = [
     position.x,
     position.y,
@@ -17,16 +26,13 @@ const encodeUpdate = ({ position, velocity, rotation }) => {
   return data.join(',');
 };
 
-const decodeUpdate = (dataString) => {
-  const data = dataString.split(',');
+const allNonNull = <T>(array: T[]): array is NonNullable<T>[] =>
+  array.every((a) => a != null);
 
-  if (data.length !== 8) return null;
+const decodeUpdate = (dataString: string): UpdatePayload | null => {
+  const data = dataString.split(',').map(toNum);
 
-  for (let i = 0; i < data.length; i++) {
-    const num = Number.parseFloat(data[i]);
-    if (Number.isNaN(num)) return null;
-    else data[i] = num;
-  }
+  if (data.length !== 8 || !allNonNull(data)) return null;
 
   const update = {
     position: { x: data[0], y: data[1], z: data[2] },
@@ -40,19 +46,17 @@ const decodeUpdate = (dataString) => {
 export default class Client {
   events = new EventEmitter();
   updateSpeed = 32;
-  initiator = null;
-  peer = null;
+  initiator: boolean | null = null;
+  peer: SimplePeer | null = null;
   text = '';
 
-  constructor(player) {
-    this.player = player;
-  }
+  constructor(private readonly player: Player) {}
 
   init() {
     this.initiator = null;
   }
 
-  onSubmit = (val) => {
+  onSubmit = (val: string) => {
     this.initiator = !!val;
 
     const isPeer = !!this.peer;
@@ -60,12 +64,12 @@ export default class Client {
 
     if (this.initiator) {
       if (!isPeer) {
-        this.peer.signal({
+        this.peer!.signal({
           type: 'offer',
           sdp: window.atob(val),
         });
       } else {
-        this.peer.signal({
+        this.peer!.signal({
           type: 'answer',
           sdp: window.atob(val),
         });
@@ -103,7 +107,8 @@ export default class Client {
   //   this.p2p.emit('peer-msg', encodeUpdate(data));
   // }
 
-  setText(val) {
+  textEl?: HTMLInputElement;
+  setText(val: string) {
     this.text = val;
     // set by React:
     if (this.textEl) this.textEl.value = val;
@@ -111,34 +116,35 @@ export default class Client {
 
   createPeer() {
     this.peer = new Peer({
-      initiator: this.initiator,
+      initiator: this.initiator ?? undefined,
     });
 
     this.peer.on('error', (err) => {
       console.error('P2P Error', err);
-      this.emit('error', err);
+      this.events.emit('error', err);
     });
 
     this.peer.on('signal', (data) => {
       if (data.type === 'offer' || data.type === 'answer') {
-        this.setText(window.btoa(data.sdp));
+        this.setText(window.btoa(data.sdp || ''));
       }
     });
 
     this.peer.on('connect', () => {
       this.setText('');
-      console.log('CONNECT', !!this.initiator);
-      this.emit('connect');
+      console.log('CONNECT', this.initiator);
+      this.events.emit('connect');
       this.sendInterval = window.setInterval(() => {
-        this.peer.send(encodeUpdate(this.player));
+        this.peer!.send(encodeUpdate(this.player));
       }, this.updateSpeed);
     });
 
     this.peer.on('data', (data) => {
-      this.emit('update', decodeUpdate(data.toString()));
+      this.events.emit('update', decodeUpdate(data.toString()));
     });
   }
 
+  sendInterval?: number | null;
   dispose() {
     if (this.sendInterval) {
       window.clearInterval(this.sendInterval);
