@@ -1,8 +1,8 @@
-import { isInteger, mapValues } from 'lodash';
+import { isInteger } from 'lodash';
 import { BufferAttribute, PlaneGeometry } from 'three';
 
 import { SEGMENT_SIZE, CHUNK_SEGMENTS } from 'src/constants';
-import { serializeBufferAttr } from 'src/utils/geometry';
+import { serializeGeometry } from 'src/utils/geometry';
 
 import MapCache from './MapCache';
 import { generateHeightMap, generateNoiseMap } from './terrainGenerator';
@@ -76,9 +76,8 @@ const generateChunk = (x, z) => {
   const heightsArray = rowToColumnMajor(heightMap);
 
   return {
-    ...mapValues(geom.attributes, serializeBufferAttr),
+    ...serializeGeometry(geom),
     heightsArray,
-    // indexAttr: serializeBufferAttr(indexAttr),
   };
 };
 
@@ -90,6 +89,7 @@ const loadChunk = async ({ x, z }) => {
   console.debug('terrain.worker request loadChunk:', x, z);
 
   // Attempt to load from cache
+  /** @type {ReturnType<typeof generateChunk>} */
   let chunkData;
   try {
     chunkData = await mapCache.loadChunk(x, z);
@@ -109,10 +109,12 @@ const loadChunk = async ({ x, z }) => {
   console.debug('terrain.worker sending chunk:', x, z);
 
   self.postMessage(
-    { cmd: 'terrain', x, z, attributes: chunkData },
-    Object.values(chunkData)
-      .map((a) => a.buffer || a.array?.buffer)
-      .filter(Boolean),
+    { cmd: 'terrain', x, z, ...chunkData },
+    [
+      chunkData.heightsArray.buffer,
+      chunkData.indexAttribute?.array.buffer,
+      ...Object.values(chunkData.attributes).map((attr) => attr?.array.buffer),
+    ].filter(Boolean),
   );
 };
 

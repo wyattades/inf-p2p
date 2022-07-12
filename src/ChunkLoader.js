@@ -48,7 +48,7 @@ export default class ChunkLoader {
     this.worker.addEventListener('message', ({ data }) => {
       switch (data.cmd) {
         case 'terrain':
-          this._receiveLoadChunk(data.x, data.z, data.attributes);
+          this._receiveLoadChunk(data.x, data.z, data);
           break;
         default:
       }
@@ -109,13 +109,13 @@ export default class ChunkLoader {
     return chunk;
   }
 
-  _receiveLoadChunk(x, z, attr) {
+  _receiveLoadChunk(x, z, chunkData) {
     console.debug('receiveLoadChunk:', x, z);
 
     const chunk = this.chunks[`${x},${z}`];
     // Chunks have the possibility of unloading before load is finished
     if (chunk) {
-      chunk.setTerrain(attr);
+      chunk.setTerrain(chunkData);
 
       // TODO: only need to enable physics for 4 chunks max at a time
       chunk.enablePhysics();

@@ -1,5 +1,5 @@
 {
-  "name": "p2p-infinite-openworld",
+  "name": "inf-p2p",
   "private": true,
   "scripts": {
     "test": "echo 'No tests configured!'; exit",

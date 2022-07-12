@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { CHUNK_SEGMENTS, SEGMENT_SIZE } from 'src/constants';
 import { Body, RAPIER } from 'src/physics';
 import { ZERO_QUATERNION } from 'src/utils/empty';
-import { deserializeBufferAttr } from 'src/utils/geometry';
+import { deserializeBufferAttr, deserializeGeometry } from 'src/utils/geometry';
 
 // const groundMaterial = new THREE.MeshLambertMaterial({
 //   vertexColors: THREE.FaceColors,
@@ -40,14 +40,23 @@ export default class Chunk {
    * @param {import(THREE.Group)} group
    * @param {number} x
    * @param {number} z
+   * @param {number} lod
    */
-  constructor(game, group, x, z) {
+  constructor(game, group, x, z, lod) {
     this.game = game;
     this.group = group;
     this.x = x;
     this.z = z;
-    // this.lod = 1;
+    this.lod = lod;
     this.mesh = null;
+  }
+
+  static loadKeyFor(x, z, lod) {
+    return `${x},${z}:${lod}`;
+  }
+
+  get loadKey() {
+    return Chunk.loadKeyFor(this.x, this.z, this.lod);
   }
 
   get quaternion() {
@@ -63,12 +72,13 @@ export default class Chunk {
   }
 
   getHeightAt(x, z) {
+    // TODO: not accurate
     if (!this.mesh) return 0;
 
     groundRayCaster.ray.origin.set(x, 1000, z);
 
     const inter = groundRayCaster.intersectObject(this.mesh);
-    if (inter && inter.length) return inter[0].point.y;
+    if (inter?.length) return inter[0].point.y;
 
     return 0;
   }
@@ -105,18 +115,12 @@ export default class Chunk {
   //   this.mesh.geometry.dispose();
   // }
 
-  setTerrain({ heightsArray, indexAttr, ...attrs }) {
+  setTerrain({ lod, heightsArray, ...serializedGeometry }) {
+    this.lod = lod;
+
     this.heightsArray = heightsArray;
 
-    const geometry = new THREE.BufferGeometry();
-    for (const key in attrs) {
-      const attr = attrs[key];
-      if (attr) {
-        geometry.setAttribute(key, deserializeBufferAttr(attr));
-        // geometry.attributes[key].needsUpdate = true; // TODO: do we need this?
-      }
-    }
-    // if (indexAttr) geometry.setIndex(deserializeBufferAttr(indexAttr));
+    const geometry = deserializeGeometry(serializedGeometry);
 
     this.mesh = new THREE.Mesh(geometry, groundMaterial.clone());
     this.mesh.matrixAutoUpdate = false; // it's not gonna move

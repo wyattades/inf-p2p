@@ -7,7 +7,7 @@ const nextConfig = {
     });
 
     config.experiments ||= {};
-    config.experiments.syncWebAssembly = true;
+    config.experiments.asyncWebAssembly = true;
 
     return config;
   },
