@@ -29,6 +29,7 @@
     "@types/lodash": "^4.14.182",
     "@types/node": "^18.0.0",
     "@types/react": "^18.0.14",
+    "@types/simple-peer": "^9.11.4",
     "@types/three": "^0.141.0",
     "@wyattades/eslint-config": "^0.11.0",
     "benchmark": "^2.1.4",

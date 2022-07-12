@@ -1,13 +1,13 @@
 export default class Perf {
   static default = new Perf();
 
-  data = {};
+  data: Record<string, number> = {};
 
-  start(name) {
+  start(name: string) {
     this.data[name] = performance.now();
   }
 
-  end(name) {
+  end(name: string) {
     const start = this.data[name];
     const end = performance.now();
     if (start != null && start <= end) {
@@ -17,7 +17,7 @@ export default class Perf {
     delete this.data[name];
   }
 
-  measure(fn, name = '?') {
+  measure(fn: (...args: any[]) => any, name = '?') {
     this.start(name);
     const res = fn();
     this.end(name);
