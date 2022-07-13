@@ -14,10 +14,14 @@ const genNoiseMap = ({
   persistance = 0.5,
   lacunarity = 2.0,
   offset = { x: 0.0, y: 0.0 },
+  size,
+  lod = 1,
 }) => {
+  const dataSize = size / lod;
+
   if (scale <= 0.0) scale = 0.0001;
 
-  const noiseMap = new Float32Array(CHUNK_SEGMENTS * CHUNK_SEGMENTS);
+  const noiseMap = new Float32Array(dataSize * dataSize);
 
   const prng = new Seedrandom(seed);
   const simplex = new SimplexNoise(seed);
@@ -35,10 +39,11 @@ const genNoiseMap = ({
     amplitude *= persistance;
   }
 
-  const halfSize = CHUNK_SEGMENTS / 2.0;
+  const halfSize = size / 2.0;
 
-  for (let y = 0; y < CHUNK_SEGMENTS; y++) {
-    for (let x = 0; x < CHUNK_SEGMENTS; x++) {
+  let di = 0;
+  for (let x = 0; x < size; x += lod) {
+    for (let y = 0; y < size; y += lod) {
       amplitude = 1.0;
       let frequency = 1.0;
       let noiseHeight = 0.0;
@@ -57,7 +62,8 @@ const genNoiseMap = ({
         frequency *= lacunarity;
       }
 
-      noiseMap[x * CHUNK_SEGMENTS + y] = Math.max(
+      // di = yi * dataSize + xi
+      noiseMap[di++] = Math.max(
         0.0,
         (noiseHeight + 1.0) / (maxHeight * MAGIC_MAX_HEIGHT_SCALE),
       );
@@ -67,13 +73,21 @@ const genNoiseMap = ({
   return noiseMap;
 };
 
-export const generateNoiseMap = (seed, chunkX, chunkZ) =>
+export const generateNoiseMap = (
+  seed,
+  chunkX,
+  chunkZ,
+  lod,
+  size = CHUNK_SEGMENTS,
+) =>
   genNoiseMap({
     seed,
     offset: {
-      x: chunkZ * (CHUNK_SEGMENTS - 1),
-      y: -chunkX * (CHUNK_SEGMENTS - 1),
+      x: chunkZ * (size - 1),
+      y: -chunkX * (size - 1),
     },
+    size,
+    lod,
   });
 
 const heightCurve = Bezier(1, 0, 0.85, 0.85);

@@ -1,14 +1,11 @@
 import * as THREE from 'three';
 
-import { CHUNK_SEGMENTS, SEGMENT_SIZE } from 'src/constants';
+import { CHUNK_SEGMENTS, LODs, SEGMENT_SIZE } from 'src/constants';
 import { Body, RAPIER } from 'src/physics';
 import { ZERO_QUATERNION } from 'src/utils/empty';
-import { deserializeBufferAttr, deserializeGeometry } from 'src/utils/geometry';
+import { deserializeGeometry } from 'src/utils/geometry';
 
-// const groundMaterial = new THREE.MeshLambertMaterial({
-//   vertexColors: THREE.FaceColors,
-// });
-
+// or MeshLambertMaterial?
 const groundMaterial = new THREE.MeshPhongMaterial({
   vertexColors: true,
   flatShading: true,
@@ -37,26 +34,25 @@ export default class Chunk {
 
   /**
    * @param {import('src/Game').default} game
-   * @param {import(THREE.Group)} group
+   * @param {THREE.Group} group
    * @param {number} x
    * @param {number} z
-   * @param {number} lod
    */
-  constructor(game, group, x, z, lod) {
+  constructor(game, group, x, z) {
     this.game = game;
     this.group = group;
     this.x = x;
     this.z = z;
-    this.lod = lod;
+    this.lod = null;
     this.mesh = null;
   }
 
-  static loadKeyFor(x, z, lod) {
-    return `${x},${z}:${lod}`;
+  static loadKeyFor(x, z) {
+    return `${x},${z}`;
   }
 
   get loadKey() {
-    return Chunk.loadKeyFor(this.x, this.z, this.lod);
+    return Chunk.loadKeyFor(this.x, this.z);
   }
 
   get quaternion() {
@@ -84,6 +80,13 @@ export default class Chunk {
   }
 
   enablePhysics() {
+    // for now, we'll use lod === 1 to test if we should enable physics.
+    if (this.lod !== LODs[0]) {
+      this.body?.dispose();
+      this.body = null;
+      return;
+    }
+
     const physics = this.game.physics;
 
     if (!physics.world)
@@ -109,16 +112,17 @@ export default class Chunk {
     // this.body.renderWireframe(this.group);
   }
 
-  // setLOD(lod) {
-  //   if (this.lod === lod) return;
-
-  //   this.mesh.geometry.dispose();
-  // }
-
   setTerrain({ lod, heightsArray, ...serializedGeometry }) {
+    if (lod === this.lod)
+      return console.warn(
+        `setTerrain called again: ${this.x},${this.z}:${lod}`,
+      );
+
     this.lod = lod;
 
     this.heightsArray = heightsArray;
+
+    this.disposeMesh();
 
     const geometry = deserializeGeometry(serializedGeometry);
 
@@ -138,7 +142,12 @@ export default class Chunk {
         new THREE.EdgesGeometry(
           new THREE.BoxGeometry(Chunk.SIZE, 512, Chunk.SIZE),
         ),
-        new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 1 }),
+        new THREE.LineBasicMaterial({
+          color: new THREE.Color()
+            .setHSL(0, 0, 1 - LODs.indexOf(this.lod) / LODs.length)
+            .getHex(),
+          linewidth: 1,
+        }),
       );
       this.mesh.matrixAutoUpdate = false;
       this.debugChunkBoundsMesh.position.copy(this.mesh.position);
@@ -146,25 +155,25 @@ export default class Chunk {
     }
   }
 
-  dispose() {
-    this.heightsArray = null;
-
+  disposeMesh() {
     if (this.mesh) {
       this.group.remove(this.mesh);
       this.mesh.geometry.dispose();
-      // clear the giant ArrayBuffers
-      for (const attr in this.mesh.geometry.attributes)
-        this.mesh.geometry.deleteAttribute(attr);
       this.mesh = null;
     }
 
     if (this.debugChunkBoundsMesh) {
       this.group.remove(this.debugChunkBoundsMesh);
       this.debugChunkBoundsMesh.geometry.dispose();
-      for (const attr in this.debugChunkBoundsMesh.geometry.attributes)
-        this.debugChunkBoundsMesh.geometry.deleteAttribute(attr);
+      this.debugChunkBoundsMesh.material.dispose();
       this.debugChunkBoundsMesh = null;
     }
+  }
+
+  dispose() {
+    this.heightsArray = null;
+
+    this.disposeMesh();
 
     if (this.body) {
       this.body.dispose();

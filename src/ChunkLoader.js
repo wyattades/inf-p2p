@@ -2,13 +2,14 @@ import * as THREE from 'three';
 
 import Chunk from 'src/Chunk';
 import { Subject } from 'src/utils/async';
+import { LODs } from 'src/constants';
 
-const DIRS = [
-  [1, 0],
-  [0, 1],
-  [-1, 0],
-  [0, -1],
-];
+// const DIRS = [
+//   [1, 0],
+//   [0, 1],
+//   [-1, 0],
+//   [0, -1],
+// ];
 
 export default class ChunkLoader {
   /** @type {Record<string, Chunk>} */
@@ -16,6 +17,13 @@ export default class ChunkLoader {
   chunkCount = 0;
   loadedCount = 0;
   playerChunk = null;
+
+  hasChunk(x, z) {
+    return Chunk.loadKeyFor(x, z) in this.chunks;
+  }
+  getChunk(x, z) {
+    return this.chunks[Chunk.loadKeyFor(x, z)];
+  }
 
   static worldPosToChunk(x, z) {
     return {
@@ -48,7 +56,7 @@ export default class ChunkLoader {
     this.worker.addEventListener('message', ({ data }) => {
       switch (data.cmd) {
         case 'terrain':
-          this._receiveLoadChunk(data.x, data.z, data);
+          this._receiveLoadChunk(data);
           break;
         default:
       }
@@ -81,104 +89,157 @@ export default class ChunkLoader {
 
     const { x: px, z: pz } = ChunkLoader.worldPosToChunk(playerX, playerZ);
 
-    for (let i = 0; i < this.renderDist * 2 + 1; i++) {
-      for (let j = 0; j < this.renderDist * 2 + 1; j++) {
-        this._requestLoadChunk(
-          px + i - this.renderDist,
-          pz + j - this.renderDist,
-        );
+    this._requestLoadChunk(px, pz);
+    this.playerChunk = this.getChunk(px, pz); // required for calculating lod
+
+    for (let i = 0, len = this.renderDist * 2 + 1; i < len; i++) {
+      for (let j = 0; j < len; j++) {
+        const x = px + i - this.renderDist,
+          z = pz + j - this.renderDist;
+        if (x === px && z === pz) continue;
+        this._requestLoadChunk(x, z);
       }
     }
-
-    this.playerChunk = this.chunks[`${px},${pz}`];
 
     await this.initialLoad.toPromise();
   }
 
+  computeLod(x, z) {
+    if (!this.playerChunk) return LODs[0];
+
+    const { x: px, z: pz } = this.playerChunk;
+
+    const dist = Math.sqrt((x - px) ** 2 + (z - pz) ** 2);
+
+    // sanity check
+    if (dist <= 2) return LODs[0];
+
+    for (let i = LODs.length - 1; i >= 0; i--) {
+      if (dist >= LODs[i] + 2) return LODs[i];
+    }
+
+    return LODs[0];
+  }
+
   _requestLoadChunk(x, z) {
-    const key = `${x},${z}`;
-    if (key in this.chunks) console.warn('Already requested chunk', x, z);
+    let chunk = this.getChunk(x, z);
 
-    const chunk = new Chunk(this.game, this.chunkGroup, x, z);
-    this.chunks[key] = chunk;
-    this.chunkCount++;
+    if (!chunk) {
+      chunk = new Chunk(this.game, this.chunkGroup, x, z);
+      this.chunks[Chunk.loadKeyFor(x, z)] = chunk;
+      this.chunkCount++;
+    }
 
-    const lod = 1; // (this.playerChunk.x - x)this.renderDist
+    const lod = this.computeLod(x, z);
 
-    this.workerCmd('loadChunk', { x: chunk.x, z: chunk.z, lod });
+    if (chunk.lod == null || chunk.lod !== lod) {
+      this.workerCmd('loadChunk', { x: chunk.x, z: chunk.z, lod });
+    }
+
     return chunk;
   }
 
-  _receiveLoadChunk(x, z, chunkData) {
-    console.debug('receiveLoadChunk:', x, z);
+  _receiveLoadChunk(chunkData) {
+    const { x, z, lod } = chunkData;
+    console.debug('receiveLoadChunk:', x, z, lod);
 
-    const chunk = this.chunks[`${x},${z}`];
-    // Chunks have the possibility of unloading before load is finished
-    if (chunk) {
-      chunk.setTerrain(chunkData);
+    const chunk = this.getChunk(x, z);
 
-      // TODO: only need to enable physics for 4 chunks max at a time
-      chunk.enablePhysics();
+    // Chunks have the possibility of unloading before this callback
+    if (!chunk) return console.warn('Received uninitialized chunk', x, z, lod);
 
-      this.loadedCount++;
+    chunk.setTerrain(chunkData);
 
-      if (this.loadedCount === this.initialChunkAmount)
-        this.initialLoad.complete();
-    } else console.warn('Received uninitialized chunk', x, z);
+    // TODO: only need to enable physics for 4 chunks max at a time
+    chunk.enablePhysics();
+
+    this.loadedCount++;
+
+    if (this.loadedCount === this.initialChunkAmount)
+      this.initialLoad.complete();
   }
 
   // FIXME: Only works if deltaX and deltaY are 0, 1, or -1
   updatePlayerChunk(x, z) {
-    if (x === this.playerChunk.x && z === this.playerChunk.z) return false;
+    const { x: px, z: pz } = this.playerChunk;
+    if (x === px && z === pz) return false;
 
-    const deltaX = x - this.playerChunk.x,
-      deltaZ = z - this.playerChunk.z;
-    const dirX = Math.sign(deltaX),
-      dirZ = Math.sign(deltaZ);
+    const chunkKeys = new Set(Object.keys(this.chunks));
 
-    // Edges
-    if (deltaX) {
-      for (let i = -this.renderDist; i <= this.renderDist; i++) {
-        const newX = this.playerChunk.x + dirX * this.renderDist + deltaX;
-        const newZ = this.playerChunk.z + i;
-        if (!(`${newX},${newZ}` in this.chunks))
-          this._requestLoadChunk(newX, newZ);
-      }
-    }
-    if (deltaZ) {
-      for (let i = -this.renderDist; i <= this.renderDist; i++) {
-        const newX = this.playerChunk.x + i;
-        const newZ = this.playerChunk.z + dirZ * this.renderDist + deltaZ;
-        if (!(`${newX},${newZ}` in this.chunks))
-          this._requestLoadChunk(newX, newZ);
+    for (let i = 0, len = this.renderDist * 2 + 1; i < len; i++) {
+      for (let j = 0; j < len; j++) {
+        const cx = x + i - this.renderDist,
+          cz = z + j - this.renderDist;
+        if (cx === x && cz === z) continue;
+        const chunk = this._requestLoadChunk(cx, cz);
+        chunkKeys.delete(chunk.loadKey);
       }
     }
 
-    // Corners
-    if (deltaX && deltaZ) {
-      const newX = this.playerChunk.x + dirX * this.renderDist + deltaX;
-      const newZ = this.playerChunk.z + dirZ * this.renderDist + deltaZ;
-      if (!(`${newX},${newZ}` in this.chunks))
-        this._requestLoadChunk(newX, newZ);
+    const unloadPadding = 2;
+    for (const key of chunkKeys) {
+      const chunk = this.chunks[key];
+      if (chunk) {
+        if (
+          Math.abs(chunk.x - px) >= this.renderDist + unloadPadding ||
+          Math.abs(chunk.z - pz) >= this.renderDist + unloadPadding
+        ) {
+          this.unloadChunk(key);
+        }
+      }
     }
 
     // Set new playerChunk
-    this.playerChunk = this.chunks[`${x},${z}`];
+    this.playerChunk = this.getChunk(x, z);
     if (!this.playerChunk) {
       this.playerChunk = this._requestLoadChunk(x, z);
       console.warn('Invalid playerChunk', x, z);
     }
 
-    // Unload chunks
-    const unloadDist = Math.max(this.renderDist + 2, this.renderDist * 2);
-    let _x = x - unloadDist,
-      _z = z - unloadDist;
-    for (const [dx, dz] of DIRS) {
-      for (let i = 0; i < unloadDist * 2; i++, _x += dx, _z += dz) {
-        const key = `${_x},${_z}`;
-        this.unloadChunk(key);
-      }
-    }
+    // const deltaX = x - px,
+    //   deltaZ = z - pz;
+    // const dirX = Math.sign(deltaX),
+    //   dirZ = Math.sign(deltaZ);
+
+    // // Edges
+    // if (deltaX !== 0) {
+    //   for (let i = -this.renderDist; i <= this.renderDist; i++) {
+    //     const newX = px + dirX * this.renderDist + deltaX;
+    //     const newZ = pz + i;
+    //     this._requestLoadChunk(newX, newZ);
+    //   }
+    // }
+    // if (deltaZ !== 0) {
+    //   for (let i = -this.renderDist; i <= this.renderDist; i++) {
+    //     const newX = px + i;
+    //     const newZ = pz + dirZ * this.renderDist + deltaZ;
+    //     this._requestLoadChunk(newX, newZ);
+    //   }
+    // }
+
+    // // Corners
+    // if (deltaX !== 0 && deltaZ !== 0) {
+    //   const newX = px + dirX * this.renderDist + deltaX;
+    //   const newZ = pz + dirZ * this.renderDist + deltaZ;
+    //   this._requestLoadChunk(newX, newZ);
+    // }
+
+    // // Set new playerChunk
+    // this.playerChunk = this.getChunk(x, z);
+    // if (!this.playerChunk) {
+    //   this.playerChunk = this._requestLoadChunk(x, z);
+    //   console.warn('Invalid playerChunk', x, z);
+    // }
+
+    // // Unload chunks
+    // const unloadDist = Math.max(this.renderDist + 2, this.renderDist * 2);
+    // let mx = x - unloadDist,
+    //   mz = z - unloadDist;
+    // for (const [dx, dz] of DIRS) {
+    //   for (let i = 0; i < unloadDist * 2; i++, mx += dx, mz += dz) {
+    //     this.unloadChunk(Chunk.loadKeyFor(mx, mz));
+    //   }
+    // }
 
     return true;
   }

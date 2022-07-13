@@ -1,3 +1,5 @@
+import { isInteger } from 'lodash';
+
 export const lerp2 = (A: number, B: number, fraction: number) =>
   Math.round(A + fraction * (B - A));
 
@@ -34,4 +36,10 @@ export const toNum = (input: any): number | null => {
 export const toInt = (input: any): number | null => {
   const num = toNum(input);
   return num === null ? null : num | 0;
+};
+
+export const enforceSqrt = (val: number) => {
+  const sqrt = Math.sqrt(val);
+  if (!isInteger(sqrt)) throw new Error(`${val} is not a square number`);
+  return sqrt;
 };

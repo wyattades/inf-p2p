@@ -10,10 +10,11 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
 // import { OutlineEffect } from 'three/examples/jsm/effects/OutlineEffect';
 
 import ChunkLoader from 'src/ChunkLoader';
+import Chunk from 'src/Chunk';
 import Controls from 'src/Controls';
 import Player from 'src/objects/Player';
 import UI from 'src/ui';
-import { Options } from 'src/options';
+import { MAX_RENDER_DIST, Options } from 'src/options';
 import Sky from 'src/objects/Sky';
 import Vehicle from 'src/objects/Vehicle';
 import { GameState } from 'src/GameState';
@@ -60,7 +61,7 @@ export default class Game {
       45,
       window.innerWidth / window.innerHeight,
       0.5,
-      2000,
+      (MAX_RENDER_DIST + 1) * Chunk.SIZE,
     );
 
     this.createScene();

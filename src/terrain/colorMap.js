@@ -1,7 +1,6 @@
 import { Color } from 'three';
 
-import { mean } from 'src/utils/math';
-import { CHUNK_SEGMENTS } from 'src/constants';
+import { enforceSqrt, mean } from 'src/utils/math';
 
 const COLOR_HEIGHTS = [
   { d: 0.3, c: 0x3363c2 }, // water deep
@@ -32,17 +31,19 @@ const getColorFromHeight = (h) => {
 };
 
 export function* iterateColorMap(terrain) {
-  // const colors = new Array((CHUNK_SEGMENTS - 1) * (CHUNK_SEGMENTS - 1));
-  // console.log(terrain.length, colors.length);
-  for (let i = 0; i < CHUNK_SEGMENTS - 1; i++) {
-    for (let j = 0; j < CHUNK_SEGMENTS - 1; j++) {
-      const tl = terrain[i * CHUNK_SEGMENTS + j];
-      const tr = terrain[i * CHUNK_SEGMENTS + j + 1];
-      const bl = terrain[(i + 1) * CHUNK_SEGMENTS + j];
-      const br = terrain[(i + 1) * CHUNK_SEGMENTS + j + 1];
+  const size = enforceSqrt(terrain.length);
 
-      // const colorIndex = i * 2 * (CHUNK_SEGMENTS - 1) + j * 2;
-      // const colorIndex = i * (CHUNK_SEGMENTS - 1) + j;
+  // const colors = new Array((size - 1) * (size - 1));
+  // console.log(terrain.length, colors.length);
+  for (let i = 0; i < size - 1; i++) {
+    for (let j = 0; j < size - 1; j++) {
+      const tl = terrain[i * size + j];
+      const tr = terrain[i * size + j + 1];
+      const bl = terrain[(i + 1) * size + j];
+      const br = terrain[(i + 1) * size + j + 1];
+
+      // const colorIndex = i * 2 * (size - 1) + j * 2;
+      // const colorIndex = i * (size - 1) + j;
       // colors[colorIndex] = getColorFromHeight(mean([tr, bl, tl]));
       // colors[colorIndex + 1] = getColorFromHeight(mean([tr, bl, br]));
       const ch = getColorFromHeight(mean([tr, br, bl, tl].filter(Boolean)));

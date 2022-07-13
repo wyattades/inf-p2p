@@ -1,8 +1,16 @@
 import { fromPairs, isEmpty } from 'lodash';
 import { EventEmitter } from 'events';
 
+export const MAX_RENDER_DIST = 10;
+
 export const OPTIONS = [
-  { label: 'Render Distance', key: 'renderDist', min: 1, max: 5, default: 2 },
+  {
+    label: 'Render Distance',
+    key: 'renderDist',
+    min: 1,
+    max: MAX_RENDER_DIST,
+    default: 2,
+  },
   { label: 'Antialiasing', key: 'antialias', default: false },
   { label: 'Fog', key: 'fog', default: true },
   { label: 'Shadows', key: 'shadows', default: true },
