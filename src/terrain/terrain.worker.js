@@ -4,7 +4,7 @@ import { BufferAttribute, PlaneGeometry } from 'three';
 import { SEGMENT_SIZE, CHUNK_SEGMENTS, LODs } from 'src/constants';
 import { serializeGeometry } from 'src/utils/geometry';
 import { enforceSqrt } from 'src/utils/math';
-import Perf from 'src/utils/Perf';
+// import Perf from 'src/utils/Perf';
 
 import MapCache from './MapCache';
 import { generateHeightMap, generateNoiseMap } from './terrainGenerator';
@@ -57,18 +57,21 @@ const generateChunk = (x, z, lod) => {
 
   // perf.start('generateNoiseMap');
 
-  let heightMap = generateNoiseMap(SEED, x, z, lod);
+  let heightMap = generateNoiseMap(SEED, x, z, lod, 0);
+
+  const secondary = generateNoiseMap(SEED, x, z, lod, 1);
 
   // perf.next('generateNoiseMap', 'colors');
 
+  const colorItemSize = 3;
   const colorAttr = new BufferAttribute(
-    new Uint8Array(size * size * 3 * 6),
-    3,
+    new Uint8Array(size * size * colorItemSize * 6),
+    colorItemSize,
     true,
   );
   const colorArray = colorAttr.array;
   let ci = 0;
-  for (const ch of iterateColorMap(heightMap, size)) {
+  for (const ch of iterateColorMap(heightMap, secondary)) {
     colorArray[ci] = colorArray[ci + 3] = colorArray[ci + 6] = ch.r;
     colorArray[ci + 1] = colorArray[ci + 4] = colorArray[ci + 7] = ch.g;
     colorArray[ci + 2] = colorArray[ci + 5] = colorArray[ci + 8] = ch.b;
@@ -78,15 +81,17 @@ const generateChunk = (x, z, lod) => {
   // perf.next('colors', 'heights');
 
   // mutates `heightMap`
-  heightMap = generateHeightMap(heightMap);
+  heightMap = generateHeightMap(heightMap, secondary);
 
   if (lod > 1) {
+    // TODO: don't need to iterate every x,y
+    // TODO: this creates ugly ditches
     for (let hx = 0; hx < size; hx++) {
       for (let hy = 0; hy < size; hy++) {
         // is on the edge
         if (hx === 0 || hy === 0 || hx === size - 1 || hy === size - 1) {
           const i = hx + hy * size;
-          heightMap[i] = Math.floor(heightMap[i] * 0.1) / 0.1;
+          heightMap[i] = Math.floor(heightMap[i] * 0.5) / 0.5;
         }
       }
     }

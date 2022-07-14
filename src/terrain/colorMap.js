@@ -2,18 +2,25 @@ import { Color } from 'three';
 
 import { enforceSqrt, mean } from 'src/utils/math';
 
+const SECONDARY_COLOR_HEIGHTS = [
+  { d: 0.1, c: 0x261c0d },
+  { d: 0.2, c: 0x593a23 },
+  { d: 0.3, c: 0x5d443e },
+  { d: 100.0, c: 0x4d3b3a },
+];
+
 const COLOR_HEIGHTS = [
-  { d: 0.3, c: 0x3363c2 }, // water deep
-  { d: 0.35, c: 0x3766c7 }, // water shallow
+  { d: 0.3, c: 0xefdda7 }, // water deep
+  { d: 0.35, c: 0xe4e5a5 }, // water shallow
   { d: 0.4, c: 0xd0d180 }, // sand
-  { d: 0.55, c: 0x579718 }, // grass light
-  { d: 0.6, c: 0x3f6a15 }, // grass dark
+  { d: 0.55, c: 0x596830 }, // grass light
+  { d: 0.6, c: 0x593a23 }, // grass dark
   { d: 0.7, c: 0x5d443e }, // dirt light
   { d: 0.9, c: 0x4d3b3a }, // dirt dark
   { d: 100.0, c: 0xfffeff }, // snow
 ];
 const tempColor = new Color();
-for (const ch of COLOR_HEIGHTS) {
+for (const ch of [...COLOR_HEIGHTS, ...SECONDARY_COLOR_HEIGHTS]) {
   tempColor.set(ch.c);
   ch.r = (tempColor.r * 255) | 0;
   ch.g = (tempColor.g * 255) | 0;
@@ -23,32 +30,36 @@ for (const ch of COLOR_HEIGHTS) {
   // ch.b = tempColor.b;
 }
 
-const getColorFromHeight = (h) => {
-  for (const ch of COLOR_HEIGHTS) {
+const getColorFromHeight = (heights, h) => {
+  for (const ch of heights) {
     if (h <= ch.d) return ch;
   }
-  return COLOR_HEIGHTS[0];
+  return heights[0];
 };
 
-export function* iterateColorMap(terrain) {
+export function* iterateColorMap(terrain, secondary) {
   const size = enforceSqrt(terrain.length);
 
   // const colors = new Array((size - 1) * (size - 1));
   // console.log(terrain.length, colors.length);
-  for (let i = 0; i < size - 1; i++) {
-    for (let j = 0; j < size - 1; j++) {
-      const tl = terrain[i * size + j];
-      const tr = terrain[i * size + j + 1];
-      const bl = terrain[(i + 1) * size + j];
-      const br = terrain[(i + 1) * size + j + 1];
+  for (let x = 0; x < size - 1; x++) {
+    for (let y = 0; y < size - 1; y++) {
+      const i = x * size + y;
+      const tl = terrain[i];
+      const tr = terrain[i + 1];
+      const bl = terrain[(x + 1) * size + y];
+      const br = terrain[(x + 1) * size + y + 1];
 
-      // const colorIndex = i * 2 * (size - 1) + j * 2;
-      // const colorIndex = i * (size - 1) + j;
-      // colors[colorIndex] = getColorFromHeight(mean([tr, bl, tl]));
-      // colors[colorIndex + 1] = getColorFromHeight(mean([tr, bl, br]));
-      const ch = getColorFromHeight(mean([tr, br, bl, tl].filter(Boolean)));
-      // colors[colorIndex] = ch;
-      // colors[colorIndex] = colors[colorIndex + 1] = ch;
+      let ch;
+      if (secondary[i] < 0.5) {
+        ch = getColorFromHeight(PRE_COLOR_HEIGHTS, secondary[i]);
+      } else {
+        ch = getColorFromHeight(
+          COLOR_HEIGHTS,
+          mean([tr, br, bl, tl].filter(Boolean)),
+        );
+      }
+
       yield ch;
       yield ch;
     }

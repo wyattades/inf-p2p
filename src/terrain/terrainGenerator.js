@@ -1,20 +1,37 @@
 import Seedrandom from 'seedrandom';
 import SimplexNoise from 'simplex-noise';
-import Bezier from 'bezier-easing';
+import createBezierEasing from 'bezier-easing';
 import { round } from 'lodash';
 
 import { CHUNK_SEGMENTS } from 'src/constants';
 
-const MAGIC_MAX_HEIGHT_SCALE = 1.16;
+const MAGIC_MAX_HEIGHT_SCALE = 1; // 1.16;
+
+const PASSES = [
+  {
+    scale: 100.0,
+    octaves: 5,
+    persistance: 0.7,
+    lacunarity: 2.0,
+  },
+  {
+    scale: 500.0,
+    octaves: 2,
+    persistance: 0.7,
+    lacunarity: 2.0,
+  },
+];
 
 const genNoiseMap = ({
   seed,
-  scale = 100.0,
-  octaves = 8,
-  persistance = 0.5,
-  lacunarity = 2.0,
+  scale,
+  octaves,
+  persistance,
+  lacunarity,
+  postAmplitude = 1.0,
+  postAddition = 0.0,
   offset = { x: 0.0, y: 0.0 },
-  size,
+  size = CHUNK_SEGMENTS,
   lod = 1,
 }) => {
   const dataSize = size / lod;
@@ -63,10 +80,13 @@ const genNoiseMap = ({
       }
 
       // di = yi * dataSize + xi
-      noiseMap[di] = Math.max(
-        0.0,
-        (noiseHeight + 1.0) / (maxHeight * MAGIC_MAX_HEIGHT_SCALE),
-      );
+      noiseMap[di] =
+        Math.max(
+          0.0,
+          (noiseHeight + 1.0) / (maxHeight * MAGIC_MAX_HEIGHT_SCALE),
+        ) *
+          postAmplitude +
+        postAddition;
 
       di++;
     }
@@ -80,10 +100,14 @@ export const generateNoiseMap = (
   chunkX,
   chunkZ,
   lod,
+  passIndex,
   size = CHUNK_SEGMENTS,
-) =>
-  genNoiseMap({
-    seed,
+) => {
+  const params = PASSES[passIndex];
+
+  return genNoiseMap({
+    ...params,
+    seed: `${passIndex}${seed}`,
     offset: {
       x: chunkZ * (size - 1),
       y: -chunkX * (size - 1),
@@ -91,13 +115,23 @@ export const generateNoiseMap = (
     size,
     lod,
   });
+};
 
-const heightCurve = Bezier(1, 0, 0.85, 0.85);
+const heightCurve = createBezierEasing(1, 0, 0.85, 0.85);
+
 const AMPLITUDE = 60.0;
+const SECONDARY_AMPLITUDE = 80.0;
 
-export const generateHeightMap = (noiseMap) => {
+const ADDITION = -30.0;
+
+export const generateHeightMap = (noiseMap, secondary) => {
   for (let i = 0; i < noiseMap.length; i++) {
-    noiseMap[i] = round(heightCurve(noiseMap[i]) * AMPLITUDE, 8);
+    noiseMap[i] = round(
+      heightCurve(noiseMap[i]) * AMPLITUDE +
+        secondary[i] * SECONDARY_AMPLITUDE +
+        ADDITION,
+      8,
+    );
   }
 
   return noiseMap;
