@@ -59,11 +59,8 @@ export default class Player {
   }
 
   setPos(x, y, z) {
-    this.object.position.set(
-      x ?? this.position.x,
-      y ?? this.position.y,
-      z ?? this.position.z,
-    );
+    const pos = this.position;
+    pos.set(x ?? pos.x, y ?? pos.y, z ?? pos.z);
 
     this.body.resetMovement();
     this.body.copyFromObj(this.object, true);
@@ -73,15 +70,10 @@ export default class Player {
     return this.body.rigidBody.linvel();
   }
 
-  onGround() {
+  onGround(groundHeight) {
     // FIXME: for some reason proximity events are not emitted when colliding with terrain
     // (static bodies) so we need to use the getHeightAt code below
     // if (this.game.physics.isProximitied(this.floorColliderHandle)) return true;
-
-    const groundHeight = this.game.chunkLoader.getHeightAt(
-      this.position.x,
-      this.position.z,
-    );
 
     return (
       this.position.y - playerHeight / 2 - floorColliderDist <= groundHeight
@@ -112,7 +104,12 @@ export default class Player {
       motion.x += 1;
     }
 
-    const onGround = this.onGround();
+    const groundHeight = this.game.chunkLoader.getHeightAt(
+      this.position.x,
+      this.position.z,
+    );
+
+    const onGround = this.onGround(groundHeight);
 
     if (
       keystate.jump &&
@@ -135,6 +132,21 @@ export default class Player {
         .set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
         .makeRotationY(rotAngleY),
     );
+
+    if (onGround) {
+      const offset = this.position
+        .clone()
+        .add(motion.clone().multiplyScalar(0.1));
+
+      const offsetHeight = this.game.chunkLoader.getHeightAt(
+        offset.x,
+        offset.z,
+      );
+
+      const slope = offsetHeight - groundHeight;
+
+      motion.y = Math.max(0, 10 * slope);
+    }
 
     motion.setLength(onGround ? moveForce : moveForce * 0.2);
 

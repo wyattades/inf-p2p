@@ -519,6 +519,7 @@ export default class Game {
     this.player?.dispose();
     this.vehicle?.dispose();
     this.flyControls?.dispose();
+    this.flyControls = null;
     this.ui?.dispose();
     this.chunkLoader?.dispose();
     this.saver?.dispose();
