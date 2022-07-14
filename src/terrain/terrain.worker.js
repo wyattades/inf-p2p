@@ -45,7 +45,7 @@ const rowToColumnMajor = (from, to = new from.constructor(from.length)) => {
 const SEED = 'The-0rig1n-oF-lif3';
 
 const generateChunk = (x, z, lod) => {
-  const perf = new Perf(`generateChunk ${x},${z} | ${lod} : `);
+  // const perf = new Perf(`generateChunk ${x},${z} | ${lod} : `);
 
   // perf.start(`geom.clone`);
 
@@ -79,6 +79,18 @@ const generateChunk = (x, z, lod) => {
 
   // mutates `heightMap`
   heightMap = generateHeightMap(heightMap);
+
+  if (lod > 1) {
+    for (let hx = 0; hx < size; hx++) {
+      for (let hy = 0; hy < size; hy++) {
+        // is on the edge
+        if (hx === 0 || hy === 0 || hx === size - 1 || hy === size - 1) {
+          const i = hx + hy * size;
+          heightMap[i] = Math.floor(heightMap[i] * 0.1) / 0.1;
+        }
+      }
+    }
+  }
 
   // perf.next('heights', 'positions');
 

@@ -59,11 +59,11 @@ export default class Player {
   }
 
   setPos(x, y, z) {
-    if (x == null) x = this.position.x;
-    if (y == null) y = this.position.y;
-    if (z == null) z = this.position.z;
-
-    this.object.position.set(x, y, z);
+    this.object.position.set(
+      x ?? this.position.x,
+      y ?? this.position.y,
+      z ?? this.position.z,
+    );
 
     this.body.resetMovement();
     this.body.copyFromObj(this.object, true);

@@ -63,10 +63,12 @@ const genNoiseMap = ({
       }
 
       // di = yi * dataSize + xi
-      noiseMap[di++] = Math.max(
+      noiseMap[di] = Math.max(
         0.0,
         (noiseHeight + 1.0) / (maxHeight * MAGIC_MAX_HEIGHT_SCALE),
       );
+
+      di++;
     }
   }
 

@@ -8,6 +8,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
 // import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass';
 // import { AfterimagePass } from 'three/examples/jsm/postprocessing/OutlinePass';
 // import { OutlineEffect } from 'three/examples/jsm/effects/OutlineEffect';
+// import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass';
 
 import ChunkLoader from 'src/ChunkLoader';
 import Chunk from 'src/Chunk';
@@ -16,7 +17,7 @@ import Player from 'src/objects/Player';
 import UI from 'src/ui';
 import { MAX_RENDER_DIST, Options } from 'src/options';
 import Sky from 'src/objects/Sky';
-import Vehicle from 'src/objects/Vehicle';
+// import Vehicle from 'src/objects/Vehicle';
 import { GameState } from 'src/GameState';
 // import Client from 'src/Client';
 // import { loadModel } from 'src/utils/models';
@@ -77,7 +78,7 @@ export default class Game {
 
     this.player = new Player(this);
 
-    this.vehicle = new Vehicle(this);
+    // this.vehicle = new Vehicle(this);
 
     this.createLights();
 
@@ -166,6 +167,16 @@ export default class Game {
     this.effectComposer = new EffectComposer(this.renderer);
 
     this.effectComposer.addPass(new RenderPass(this.scene, this.camera));
+
+    // this.effectComposer.addPass(
+    //   new BokehPass(this.scene, this.camera, {
+    //     focus: 0,
+    //     aperture: 0.9,
+    //     maxblur: 0.01,
+    //     width: this.renderer.domElement.width,
+    //     height: this.renderer.domElement.height,
+    //   }),
+    // );
 
     // this.effectComposer.addPass(new SSAOPass(this.scene, this.camera));
 
@@ -512,6 +523,7 @@ export default class Game {
     this.chunkLoader?.dispose();
     this.saver?.dispose();
     this.scene?.clear();
+    this.objectGroup?.clear();
     this.client?.dispose();
     this.renderer?.dispose();
     this.controls?.unbindControls();
