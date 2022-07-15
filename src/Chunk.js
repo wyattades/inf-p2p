@@ -69,14 +69,14 @@ export default class Chunk {
 
   getHeightAt(x, z) {
     // TODO: not accurate
-    if (!this.mesh) return 0;
+    if (!this.mesh) return -99998;
 
     groundRayCaster.ray.origin.set(x, 1000, z);
 
     const inter = groundRayCaster.intersectObject(this.mesh);
     if (inter?.length) return inter[0].point.y;
 
-    return 0;
+    return -99997;
   }
 
   enablePhysics() {
@@ -118,9 +118,10 @@ export default class Chunk {
   }
 
   setTerrain({ lod, heightsArray, ...serializedGeometry }) {
-    if (lod === this.lod)
+    // TODO: there could be a race condition here where lower-res terrain takes priority over higher-res
+    if (lod !== this.lod)
       return console.warn(
-        `setTerrain called again: ${this.x},${this.z}:${lod}`,
+        `setTerrain called with mismatch lod: ${this.x},${this.z}: ${this.lod} != ${lod}`,
       );
 
     this.lod = lod;

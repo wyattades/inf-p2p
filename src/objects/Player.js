@@ -201,7 +201,6 @@ export default class Player {
     // // gravity
     // this.velocity.y -= gravity;
 
-    // TODO: fix the root cause
     // TODO: figure out the actual minimum height
     if (this.position.y < -100) {
       console.warn('Player fell out of the world!');

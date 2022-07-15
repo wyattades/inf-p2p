@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import Chunk from 'src/Chunk';
 import { Subject } from 'src/utils/async';
 import { LODs } from 'src/constants';
+import { distanceSq } from 'src/utils/math';
 
 // const DIRS = [
 //   [1, 0],
@@ -133,6 +134,7 @@ export default class ChunkLoader {
     const lod = this.computeLod(x, z);
 
     if (chunk.lod == null || chunk.lod !== lod) {
+      chunk.lod = lod; // this line prevents the chunk from be loaded again
       this.workerCmd('loadChunk', { x: chunk.x, z: chunk.z, lod });
     }
 
@@ -159,10 +161,26 @@ export default class ChunkLoader {
       this.initialLoad.complete();
   }
 
-  // FIXME: Only works if deltaX and deltaY are 0, 1, or -1
-  updatePlayerChunk(x, z) {
+  prevPos = null;
+  updateChunk(vx, vz) {
+    const { x, z } = ChunkLoader.worldPosToChunk(vx, vz);
+
+    // Set new playerChunk
+    this.playerChunk = this.getChunk(x, z);
+    if (!this.playerChunk) {
+      this.playerChunk = this._requestLoadChunk(x, z);
+      console.warn('Invalid playerChunk', x, z);
+    }
+
+    if (
+      this.prevPos &&
+      distanceSq(vx, vz, this.prevPos.x, this.prevPos.z) < (Chunk.SIZE / 2) ** 2
+    ) {
+      return false;
+    }
+    this.prevPos = { x: vx, z: vz };
+
     const { x: px, z: pz } = this.playerChunk;
-    if (x === px && z === pz) return false;
 
     const chunkKeys = new Set(Object.keys(this.chunks));
 
@@ -170,7 +188,7 @@ export default class ChunkLoader {
       for (let j = 0; j < len; j++) {
         const cx = x + i - this.renderDist,
           cz = z + j - this.renderDist;
-        if (cx === x && cz === z) continue;
+        // if (cx === x && cz === z) continue;
         const chunk = this._requestLoadChunk(cx, cz);
         chunkKeys.delete(chunk.loadKey);
       }
@@ -187,13 +205,6 @@ export default class ChunkLoader {
           this.unloadChunk(key);
         }
       }
-    }
-
-    // Set new playerChunk
-    this.playerChunk = this.getChunk(x, z);
-    if (!this.playerChunk) {
-      this.playerChunk = this._requestLoadChunk(x, z);
-      console.warn('Invalid playerChunk', x, z);
     }
 
     // const deltaX = x - px,

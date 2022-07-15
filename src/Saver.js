@@ -35,8 +35,6 @@ export default class Saver {
   constructor(posGet, posSet) {
     this.posGet = posGet;
     this.posSet = posSet;
-
-    this.start();
   }
 
   savePos = () => save(this.posGet());

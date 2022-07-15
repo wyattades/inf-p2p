@@ -52,8 +52,6 @@ export default class Game {
   }
 
   init() {
-    this.state = null;
-
     this.options = new Options();
 
     this.ui = new UI();
@@ -82,10 +80,15 @@ export default class Game {
 
     this.createLights();
 
+    // load player position, and start saving it on an interval
     this.saver = new Saver(
       () => this.player.position,
-      (next) => this.player.setPos(next.x, next.y, next.z),
+      (next) => {
+        // add some extra `y` to avoid clipping through the ground
+        this.player.setPos(next.x, next.y + 10, next.z);
+      },
     );
+    this.saver.start();
 
     this.objectGroup = new THREE.Group();
     this.scene.add(this.objectGroup);
@@ -465,22 +468,20 @@ export default class Game {
       // Skybox follow position
       this.sky.position.set(followPosition.x, 0, followPosition.z);
 
-      // Update chunk
-      const { x: chunkX, z: chunkZ } = ChunkLoader.worldPosToChunk(
-        followPosition.x,
-        followPosition.z,
-      );
+      if (this.tick % 5 === 0) {
+        const { x: chunkX, z: chunkZ } = ChunkLoader.worldPosToChunk(
+          followPosition.x,
+          followPosition.z,
+        );
 
-      if (this.chunkLoader.updatePlayerChunk(chunkX, chunkZ)) {
         this.ui.set('chunkX', chunkX.toString());
         this.ui.set('chunkZ', chunkZ.toString());
-      }
-
-      if (this.tick % 5 === 0) {
         this.ui.set('x', followPosition.x.toFixed(2));
         this.ui.set('y', followPosition.y.toFixed(2));
         this.ui.set('z', followPosition.z.toFixed(2));
       }
+
+      this.chunkLoader.updateChunk(followPosition.x, followPosition.z);
     }
 
     if (this.tick % 10 === 0) {
@@ -489,7 +490,7 @@ export default class Game {
       this.ui.set('tick', this.tick.toString());
     }
 
-    if (this.options.get('debug') && this.tick % 5 === 0) {
+    if (this.tick % 5 === 0 && this.options.get('debug')) {
       this.physics.debugMesh(); // just updates the geometry
     }
 
