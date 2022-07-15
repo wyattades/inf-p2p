@@ -40,8 +40,6 @@ const getColorFromHeight = (heights, h) => {
 export function* iterateColorMap(terrain, secondary) {
   const size = enforceSqrt(terrain.length);
 
-  // const colors = new Array((size - 1) * (size - 1));
-  // console.log(terrain.length, colors.length);
   for (let x = 0; x < size - 1; x++) {
     for (let y = 0; y < size - 1; y++) {
       const i = x * size + y;
@@ -52,7 +50,7 @@ export function* iterateColorMap(terrain, secondary) {
 
       let ch;
       if (secondary[i] < 0.5) {
-        ch = getColorFromHeight(PRE_COLOR_HEIGHTS, secondary[i]);
+        ch = getColorFromHeight(SECONDARY_COLOR_HEIGHTS, secondary[i]);
       } else {
         ch = getColorFromHeight(
           COLOR_HEIGHTS,
