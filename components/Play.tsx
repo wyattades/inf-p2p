@@ -2,8 +2,10 @@ import React, { useEffect, useRef } from 'react';
 import { useEvent, useUpdate } from 'react-use';
 
 import { GameProvider } from 'lib/hooks/game';
+import { StateOverlay } from 'components/UI';
 
 import Game from 'src/Game';
+import { GameState } from 'src/GameState';
 
 export const Play: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -64,7 +66,7 @@ export const Play: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <GameProvider value={{ game }}>
       <canvas ref={canvas} id="game" />
-      {game ? children : null}
+      {game ? children : <StateOverlay gameState={GameState.LOADING} />}
     </GameProvider>
   );
 };

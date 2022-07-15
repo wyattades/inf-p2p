@@ -121,9 +121,9 @@ const Menu = () => {
   );
 };
 
-const Overlay = () => {
-  const gameState = useGameState();
-
+export const StateOverlay: React.FC<{ gameState: GameState }> = ({
+  gameState,
+}) => {
   return gameState === GameState.LOADING ? (
     <div id="text-overlay">
       <p className="loader">Initializing world</p>
@@ -135,12 +135,17 @@ const Overlay = () => {
   ) : null;
 };
 
+const ConnectedOverlay = () => {
+  const gameState = useGameState();
+  return <StateOverlay gameState={gameState} />;
+};
+
 export const UI: React.FC = () => {
   return (
     <>
       <Info />
       <Menu />
-      <Overlay />
+      <ConnectedOverlay />
     </>
   );
 };

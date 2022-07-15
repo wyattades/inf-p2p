@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 
 import { useSubscribe } from 'lib/hooks/useSubscribe';
+import { GameState } from 'src/GameState';
 import type Game from 'src/Game';
 
 const GameCtx = createContext<{ game: Game | null } | null>(null);
@@ -16,7 +17,7 @@ export const useGame = () => {
 export const useGameState = () => {
   const game = useGame();
   const state = useSubscribe(game.events, 'set_game_state', () => game.state!);
-  return state;
+  return state ?? GameState.LOADING;
 };
 
 export const useOptions = () => {
