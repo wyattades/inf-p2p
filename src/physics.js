@@ -28,6 +28,8 @@ export class Body {
       angularDamping = null,
       linearDamping = null,
       mass = null,
+      type = 'unknown',
+      userData = {},
     } = {},
   ) {
     this.world = physics.world;
@@ -47,6 +49,11 @@ export class Body {
     // .setPrincipalAngularInertia({ x: 0, y: 0, z: 0 }, true, false, false),
 
     this.rigidBody = this.world.createRigidBody(desc);
+
+    this.rigidBody.userData = {
+      ...userData,
+      type,
+    };
   }
 
   addCollider(colliderDesc) {
@@ -268,19 +275,12 @@ export class Physics {
 
     this.world.bodies.forEach((body) => {
       if (body.isDynamic()) {
+        if (body.userData.type === 'player') return;
+
         const position = body.translation();
-        // const rotation = body.rotation();
 
-        // bodies[body.handle] = { position, rotation };
+        addLine(position, add(position, body.linvel()), COLORS.orange);
 
-        // for (let i = 0, l = body.numColliders(); i < l; i++) {
-        //   const collider = this.world.colliders.get(body.collider(i));
-
-        //   const shapeType = collider.shapeType();
-        //   if (RAPIER.ShapeType.Cylinder === shapeType) {
-
-        //   }
-        // }
         addLine(position, add(position, { x: 0, y: 10, z: 0 }), COLORS.red);
       }
     });

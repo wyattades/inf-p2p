@@ -102,6 +102,7 @@ class Wheel {
 
     const body = (this.body = new Body(mesh, this.game.physics, {
       angularDamping: wheelAngularDamping,
+      type: 'wheel',
     }));
     body.addCollider(
       RAPIER.ColliderDesc.cylinder(width / 2, radius)
@@ -267,6 +268,7 @@ export default class Vehicle {
     const chassisBody = (this.chassisBody = new Body(
       chassisMesh,
       this.game.physics,
+      { type: 'vehicle' },
     ));
     chassisBody.addCollider(
       RAPIER.ColliderDesc.cuboid(

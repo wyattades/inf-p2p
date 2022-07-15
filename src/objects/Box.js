@@ -19,7 +19,7 @@ export default class Box {
 
     this.mesh.gameObject = this;
 
-    this.body = new Body(this.mesh, game.physics);
+    this.body = new Body(this.mesh, game.physics, { type: 'box' });
     this.body.addCollider(
       RAPIER.ColliderDesc.cuboid(size * 0.5, size * 0.5, size * 0.5),
     );

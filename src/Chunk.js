@@ -99,7 +99,12 @@ export default class Chunk {
       return console.warn('Chunk#enablePhysics: terrain data not loaded yet');
 
     this.body = new Body(this, physics, {
-      bodyType: RAPIER.RigidBodyType.Static,
+      bodyType: RAPIER.RigidBodyType.Fixed,
+      type: 'chunk',
+      userData: {
+        x: this.x,
+        z: this.z,
+      },
     });
     this.body.addCollider(
       RAPIER.ColliderDesc.heightfield(
