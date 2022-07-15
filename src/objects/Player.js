@@ -1,12 +1,18 @@
 import * as THREE from 'three';
 
 import { Body, RAPIER } from 'src/physics';
+import { clamp } from 'src/utils/math';
 
 // TODO seperate keyevents, player, and physics
 
 const _clamp = new THREE.Vector2(0, 0);
 const clampXZ = (vec3, max) => {
-  _clamp.set(vec3.x, vec3.z).clampLength(0, max);
+  _clamp.set(vec3.x, vec3.z);
+
+  const length = _clamp.length();
+  if (length < max) return null;
+
+  _clamp.setLength(max);
 
   vec3.x = _clamp.x;
   vec3.z = _clamp.y;
@@ -37,6 +43,7 @@ export default class Player {
 
     this.body = new Body(this.object, this.game.physics, {
       lockRotation: true,
+      type: 'player',
     });
     this.body.addCollider(
       RAPIER.ColliderDesc.capsule(
@@ -111,18 +118,16 @@ export default class Player {
 
     const onGround = this.onGround(groundHeight);
 
+    const linvel = this.body.rigidBody.linvel();
+
+    let updateVel = null;
+
     if (
       keystate.jump &&
       tick - this.lastJumpAt > 30 && // ~0.5 seconds
       onGround
     ) {
-      this.body.rigidBody.setLinvel(
-        {
-          ...this.body.rigidBody.linvel(),
-          y: jumpSpeed,
-        },
-        true,
-      );
+      updateVel = { ...linvel, y: jumpSpeed };
       this.lastJumpAt = tick;
     }
 
@@ -145,16 +150,25 @@ export default class Player {
 
       const slope = offsetHeight - groundHeight;
 
-      motion.y = Math.max(0, 10 * slope);
+      motion.y = clamp(slope, 0, 0.1) * 3.0;
     }
 
     motion.setLength(onGround ? moveForce : moveForce * 0.2);
 
-    this.body.rigidBody.resetForces();
-    this.body.rigidBody.addForce(motion);
+    // debug:
+    // console.log(onGround, groundHeight, motion.x, motion.y, motion.z);
 
-    const linVel = this.body.rigidBody.linvel();
-    this.body.rigidBody.setLinvel(clampXZ(linVel, maxSpeed));
+    this.body.rigidBody.resetForces();
+    if (motion.lengthSq() > 0) {
+      this.body.rigidBody.addForce(motion, true);
+
+      // this.body.rigidBody.applyImpulse(motion, true);
+    }
+
+    const clampedVel = clampXZ(updateVel || linvel, maxSpeed);
+    if (clampedVel) updateVel = clampedVel;
+
+    if (updateVel) this.body.rigidBody.setLinvel(updateVel);
 
     // const drag = 0.91; // TODO: Use slope
 
@@ -186,6 +200,19 @@ export default class Player {
 
     // // gravity
     // this.velocity.y -= gravity;
+
+    // TODO: fix the root cause
+    // TODO: figure out the actual minimum height
+    if (this.position.y < -100) {
+      console.warn('Player fell out of the world!');
+
+      this.body.resetMovement();
+      this.body.rigidBody.setTranslation({
+        ...this.body.rigidBody.translation(),
+        y: groundHeight + 10,
+      });
+      this.body.copyToObj(this.object, true);
+    }
   }
 
   dispose() {
