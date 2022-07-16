@@ -14,6 +14,9 @@ export const OPTIONS = [
   { label: 'Antialiasing', key: 'antialias', default: false },
   { label: 'Fog', key: 'fog', default: true },
   { label: 'Shadows', key: 'shadows', default: true },
+  // caching seems to help on older devices, but actually
+  // slows down newer devices. so make it configurable
+  { label: 'Caching', key: 'cache', default: true },
   { label: 'Debug', key: 'debug', default: false },
   { label: 'Show UI', key: 'show_ui', default: true, updateImmediate: true },
   {

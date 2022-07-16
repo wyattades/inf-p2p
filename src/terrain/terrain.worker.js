@@ -123,11 +123,11 @@ const generateChunk = (x, z, lod) => {
 };
 
 // TODO: send error message on failure?
-const loadChunk = async ({ x, z, lod }) => {
+const loadChunk = async ({ x, z, lod, caching }) => {
   if (!isInteger(x) || !isInteger(z) || !LODs.includes(lod))
     return console.warn(`Invalid loadChunk args: ${x},${z}:${lod}`);
 
-  const shouldUseCache = lod === LODs[0];
+  const shouldUseCache = caching && lod === LODs[0];
 
   console.debug('terrain.worker request loadChunk:', x, z, lod);
 

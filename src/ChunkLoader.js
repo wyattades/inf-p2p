@@ -139,7 +139,13 @@ export default class ChunkLoader {
 
     if (chunk.lod == null || chunk.lod !== lod) {
       chunk.lod = lod; // this line prevents the chunk from be loaded again
-      this.workerCmd('loadChunk', { x: chunk.x, z: chunk.z, lod });
+
+      this.workerCmd('loadChunk', {
+        x: chunk.x,
+        z: chunk.z,
+        lod,
+        caching: this.game.options.get('cache'),
+      });
     }
 
     return chunk;
