@@ -205,12 +205,7 @@ export default class Player {
     if (this.position.y < -100) {
       console.warn('Player fell out of the world!');
 
-      this.body.resetMovement();
-      this.body.rigidBody.setTranslation({
-        ...this.body.rigidBody.translation(),
-        y: groundHeight + 10,
-      });
-      this.body.copyToObj(this.object, true);
+      this.setPos(null, groundHeight + 10, null);
     }
   }
 

@@ -89,7 +89,13 @@ export default class Controls {
     }
   }
 
+  // disableNextPointLock = false;
   onPointerLockChange = () => {
+    // if (this.disableNextPointLockAt) {
+    //   this.disableNextPointLockAt = false;
+    //   return;
+    // }
+
     if (!document.pointerLockElement) this.pauseFromPlaying();
   };
 

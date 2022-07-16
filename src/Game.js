@@ -1,4 +1,4 @@
-import { memoize } from 'lodash';
+import { flow, memoize } from 'lodash';
 import { EventEmitter } from 'events';
 import MainLoop from 'mainloop.js';
 import * as THREE from 'three';
@@ -157,7 +157,7 @@ export default class Game {
     });
     if (this.options.get('shadows')) {
       this.renderer.shadowMap.enabled = true;
-      this.renderer.shadowMap.type = THREE.BasicShadowMap;
+      this.renderer.shadowMap.type = THREE.PCFShadowMap;
     }
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -233,22 +233,36 @@ export default class Game {
 
     this.dirLight = new THREE.DirectionalLight(0xfff4e5, 1);
 
-    // FIXME:
-    // this.dirLight.castShadow = this.options.get('shadows');
+    if (this.options.get('shadows')) {
+      this.dirLight.castShadow = true;
+      // this.dirLight.shadowCameraVisible = true;
 
-    // const d = 50;
-    // this.dirLight.shadow.camera.left = -d;
-    // this.dirLight.shadow.camera.right = d;
-    // this.dirLight.shadow.camera.top = d;
-    // this.dirLight.shadow.camera.bottom = -d;
+      // the higher `size`, the higher definition the shadows
+      const size = 2048;
+      this.dirLight.shadow.mapSize.width = size;
+      this.dirLight.shadow.mapSize.height = size;
 
-    // this.dirLight.shadow.camera.far = 3500;
-    // this.dirLight.shadow.bias = -0.0001;
+      // how much area of the map the shadows are visible
+      const d = 500;
+      this.dirLight.shadow.camera.left = -d;
+      this.dirLight.shadow.camera.right = d;
+      this.dirLight.shadow.camera.top = d;
+      this.dirLight.shadow.camera.bottom = -d;
+
+      this.dirLight.shadow.camera.near = 0.5;
+      this.dirLight.shadow.camera.far = 1000;
+
+      // this.dirLight.shadow.radius = 1.0;
+      // this.dirLight.shadow.bias = 0.001;
+      // this.dirLight.shadow.blurSamples = 1;
+      // this.dirLight.shadow.normalBias = 0.1;
+    }
 
     if (this.options.get('debug'))
       this.scene.add(new THREE.CameraHelper(this.dirLight.shadow.camera));
 
     this.scene.add(this.dirLight);
+    this.scene.add(this.dirLight.target);
   }
 
   setTime(hour) {
@@ -257,8 +271,25 @@ export default class Game {
     const angle = -norm * 2 * Math.PI - Math.PI / 2;
 
     if (this.dirLight) {
-      this.dirLight.position.set(Math.cos(angle), Math.sin(angle), 0);
+      // TODO: deduplicate logic
+      const followPosition =
+        this.flyControls?.object.position || this.player?.position;
+
+      const offset = followPosition.clone().setY(0);
+
+      offset.x += Math.cos(angle) * 500;
+
+      this.dirLight.position
+        .set(Math.cos(angle), Math.sin(angle), 0)
+        .add(offset);
+      this.dirLight.target.position.copy(offset);
       // .setLength(30);
+
+      // console.log(
+      //   offset.toArray(),
+      //   this.dirLight.position.toArray(),
+      //   this.dirLight.target.position.toArray(),
+      // );
 
       this.dirLight.intensity = Math.sin(angle);
     }
@@ -297,8 +328,8 @@ export default class Game {
     this.controls.bindPress('toggleInfo', () => this.ui.toggleInfo());
     this.controls.bindPress('toggleMenu', () => {
       if (this.state === GameState.PAUSED) {
-        // TODO: doesn't work b/c when user presses ESC:
-        //       first, pointerlockchange is triggered. then immediately after, this callback is triggered
+        // when user presses ESC: first, pointerlockchange is triggered. then immediately after, this callback is triggered
+        // TODO doesn't work. this.disableNextPointLock = true;
         // this.setState(GameState.PLAYING);
       } else if (this.state === GameState.PLAYING) {
         this.setState(GameState.PAUSED);
@@ -468,6 +499,18 @@ export default class Game {
       // Skybox follow position
       this.sky.position.set(followPosition.x, 0, followPosition.z);
 
+      // if (this.dirLight) {
+      //   const shadowCamera = this.dirLight;
+      //   shadowCamera.position.x = followPosition.x;
+      //   // pos.y = followPosition.y;
+      //   shadowCamera.position.z = followPosition.z;
+      //   // shadowCamera.updateMatrix();
+      // }
+
+      // update chunks if needed
+      this.chunkLoader.updateChunk(followPosition.x, followPosition.z);
+
+      // update UI stats
       if (this.tick % 5 === 0) {
         const { x: chunkX, z: chunkZ } = ChunkLoader.worldPosToChunk(
           followPosition.x,
@@ -480,8 +523,6 @@ export default class Game {
         this.ui.set('y', followPosition.y.toFixed(2));
         this.ui.set('z', followPosition.z.toFixed(2));
       }
-
-      this.chunkLoader.updateChunk(followPosition.x, followPosition.z);
     }
 
     if (this.tick % 10 === 0) {
@@ -530,6 +571,9 @@ export default class Game {
     this.renderer?.dispose();
     this.controls?.unbindControls();
     this.physics?.dispose();
+
+    delete window.GAME;
+    delete window.cheat;
 
     // we need to listen to `reinitialized` event
     // this.events.removeAllListeners();
