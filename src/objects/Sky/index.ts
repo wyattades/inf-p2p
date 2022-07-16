@@ -51,9 +51,10 @@ class Sky extends THREE.Mesh {
     this.scale.setScalar(450000);
   }
 
-  setSunPos(inclination, azimuth) {
+  setSunPos(inclination: number, azimuth: number) {
     const distance = 400000;
-    const pos = this.material.uniforms.sunPosition.value;
+    const pos = (this.material as THREE.ShaderMaterial).uniforms.sunPosition
+      .value;
     const theta = Math.PI * (inclination - 0.5);
     const phi = 2 * Math.PI * (azimuth - 0.5);
     pos.x = distance * Math.cos(phi);

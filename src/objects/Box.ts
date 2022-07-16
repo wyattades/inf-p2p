@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 
 import { Body, RAPIER } from 'src/physics';
+import type Game from 'src/Game';
 
 export default class Box {
-  /**
-   * @param {import('src/Game').default} game
-   */
-  constructor(game, pos, size = 3) {
+  mesh: THREE.Mesh;
+  body: Body;
+
+  constructor(readonly game: Game, pos: THREE.Vector3, size = 3) {
     const geometry = new THREE.BoxGeometry(size, size, size, 1, 1, 1);
 
     const material = new THREE.MeshPhongMaterial({
@@ -17,6 +18,7 @@ export default class Box {
     this.mesh.position.copy(pos);
     // mesh.quaternion.copy(quat);
 
+    // @ts-expect-error TODO better way to iterate objects
     this.mesh.gameObject = this;
 
     this.body = new Body(this.mesh, game.physics, { type: 'box' });
@@ -25,7 +27,7 @@ export default class Box {
     );
   }
 
-  update(_delta, _tick) {
+  update(_delta: number, _tick: number) {
     this.body.copyToObj(this.mesh);
   }
 }
