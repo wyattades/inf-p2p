@@ -1,4 +1,4 @@
-import { flow, memoize } from 'lodash';
+import { memoize } from 'lodash';
 import { EventEmitter } from 'events';
 import MainLoop from 'mainloop.js';
 import * as THREE from 'three';
@@ -42,6 +42,15 @@ export default class Game {
 
   /** @type {Physics} */
   physics;
+
+  /** @type {ChunkLoader} */
+  chunkLoader;
+
+  /** @type {Player} */
+  player;
+
+  /** @type {Controls} */
+  controls;
 
   constructor(canvas) {
     this.canvas = canvas;
@@ -227,6 +236,15 @@ export default class Game {
   };
 
   createLights() {
+    if (this.hemiLight) {
+      this.hemiLight.dispose();
+      this.scene.remove(this.hemiLight);
+    }
+    if (this.dirLight) {
+      this.dirLight.dispose();
+      this.scene.remove(this.dirLight);
+    }
+
     this.hemiLight = new THREE.HemisphereLight(0x3284ff, 0xffc87f, 0.3);
     this.hemiLight.position.set(0, 50, 0);
     this.scene.add(this.hemiLight);
@@ -307,8 +325,7 @@ export default class Game {
     );
     this.player.setPos(null, heightAt + 30, null);
 
-    this.ui.set('chunkX', this.chunkLoader.playerChunk.x.toString());
-    this.ui.set('chunkZ', this.chunkLoader.playerChunk.z.toString());
+    this.updatePositionStats(this.player.position);
   }
 
   followType = null;
@@ -387,13 +404,18 @@ export default class Game {
 
         // Update game if options changed
         const changed = this.options?.checkChanged() || {};
-        if (changed.renderDist != null || changed.debug != null) {
+        if (
+          changed.renderDist != null ||
+          changed.debug != null ||
+          changed.shadows != null
+        ) {
           this.setup();
           return;
         } else if (changed.fog != null) {
           this.createFog();
-        } else if (changed.antialias != null || changed.shadows != null) {
+        } else if (changed.antialias != null) {
           this.createRenderer();
+          // this.createLights();
         }
       }
       this.controls?.lockPointer();
@@ -439,6 +461,19 @@ export default class Game {
   cameraFollowPlayer(player) {
     this.camera.position.copy(player.position);
     this.camera.rotation.copy(player.object.rotation);
+  }
+
+  updatePositionStats(position) {
+    const { x: chunkX, z: chunkZ } = ChunkLoader.worldPosToChunk(
+      position.x,
+      position.z,
+    );
+
+    this.ui.set('chunkX', chunkX.toString());
+    this.ui.set('chunkZ', chunkZ.toString());
+    this.ui.set('x', position.x.toFixed(2));
+    this.ui.set('y', position.y.toFixed(2));
+    this.ui.set('z', position.z.toFixed(2));
   }
 
   updateEnd = (fps, panic) => {
@@ -510,16 +545,7 @@ export default class Game {
 
       // update UI stats
       if (this.tick % 5 === 0) {
-        const { x: chunkX, z: chunkZ } = ChunkLoader.worldPosToChunk(
-          followPosition.x,
-          followPosition.z,
-        );
-
-        this.ui.set('chunkX', chunkX.toString());
-        this.ui.set('chunkZ', chunkZ.toString());
-        this.ui.set('x', followPosition.x.toFixed(2));
-        this.ui.set('y', followPosition.y.toFixed(2));
-        this.ui.set('z', followPosition.z.toFixed(2));
+        this.updatePositionStats(followPosition);
       }
     }
 
