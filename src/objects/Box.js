@@ -25,7 +25,7 @@ export default class Box {
     );
   }
 
-  update() {
+  update(_delta, _tick) {
     this.body.copyToObj(this.mesh);
   }
 }

@@ -32,7 +32,7 @@ const InfoInner = () => {
 };
 
 const Info = () => {
-  const [{ show_ui: showing }] = useOptions();
+  const [{ showUi: showing }] = useOptions();
   if (!showing) return null;
 
   return <InfoInner />;

@@ -4,32 +4,34 @@ import Chunk from 'src/Chunk';
 import { Subject } from 'src/utils/async';
 import { LODs } from 'src/constants';
 import { DEV } from 'src/env';
+import type { LoadChunkResponse } from 'src/terrain/terrain.worker';
+import type Game from 'src/Game';
 
 export default class ChunkLoader {
-  /** @type {Map<string, Chunk>} */
-  chunks = new Map();
+  chunks = new Map<string, Chunk>();
   chunkCount = 0;
   loadedCount = 0;
+  chunkGroup: THREE.Group;
+  renderDist: number;
+  scene: THREE.Scene;
+  initialChunkAmount: number;
+  worker: Worker;
 
-  hasChunk(x, z) {
+  hasChunk(x: number, z: number) {
     return this.chunks.has(Chunk.loadKeyFor(x, z));
   }
-  getChunk(x, z) {
+  getChunk(x: number, z: number) {
     return this.chunks.get(Chunk.loadKeyFor(x, z));
   }
 
-  static worldPosToChunk(x, z) {
+  static worldPosToChunk(x: number, z: number) {
     return {
       x: Math.floor(x / Chunk.SIZE),
       z: Math.floor(z / Chunk.SIZE),
     };
   }
 
-  /**
-   * @param {import('src/Game')} game
-   * @param {number} renderDist
-   */
-  constructor(game, renderDist) {
+  constructor(readonly game: Game, renderDist: number) {
     this.game = game;
     this.scene = game.scene;
     this.renderDist = Math.max(1, renderDist | 0);
@@ -57,12 +59,23 @@ export default class ChunkLoader {
   }
 
   cmdIdCounter = 0;
-  workerCmd(cmd, body, wait = false) {
+  workerCmd<Res>(
+    cmd: string,
+    body: Record<string, any> | null = null,
+    wait = false,
+  ) {
     if (!wait) return this.worker.postMessage({ cmd, ...(body || {}) });
 
     return new Promise((resolve, reject) => {
       const cmdId = this.cmdIdCounter++;
-      const cb = ({ data }) => {
+      const cb = ({
+        data,
+      }: MessageEvent<{
+        cmd: string;
+        cmdId?: number;
+        error?: string;
+        response: Res;
+      }>) => {
         if (data.cmd === 'worker_response' && data.cmdId === cmdId) {
           this.worker.removeEventListener('message', cb);
           if (data.error != null) reject(new Error(data.error));
@@ -75,6 +88,7 @@ export default class ChunkLoader {
     });
   }
 
+  initialLoad: Subject | null = null;
   async loadInitial() {
     if (!this.followPos) throw new Error('No follow positon set');
 
@@ -89,7 +103,7 @@ export default class ChunkLoader {
     this.initialLoad = null;
   }
 
-  computeLod(chunkX, chunkZ) {
+  computeLod(chunkX: number, chunkZ: number) {
     if (!this.followPos) {
       console.warn(`Missing followPos in computeLod: ${chunkX},${chunkZ}`);
       return LODs[0];
@@ -108,8 +122,8 @@ export default class ChunkLoader {
     };
 
     const distSq = new THREE.Vector3()
-      .copy(chunkPos)
-      .distanceToSquared(normalFollowPos);
+      .copy(chunkPos as THREE.Vector3)
+      .distanceToSquared(normalFollowPos as THREE.Vector3);
 
     // sanity check
     if (distSq <= 4) return LODs[0];
@@ -121,7 +135,7 @@ export default class ChunkLoader {
     return LODs[0];
   }
 
-  _requestLoadChunk(x, z) {
+  _requestLoadChunk(x: number, z: number) {
     let chunk = this.getChunk(x, z);
 
     if (!chunk) {
@@ -139,14 +153,14 @@ export default class ChunkLoader {
         x: chunk.x,
         z: chunk.z,
         lod,
-        caching: this.game.options.get('cache'),
+        caching: this.game.options!.get('cache'),
       });
     }
 
     return chunk;
   }
 
-  _receiveLoadChunk(chunkData) {
+  _receiveLoadChunk(chunkData: LoadChunkResponse) {
     const { x, z, lod } = chunkData;
 
     if (DEV) console.debug('receiveLoadChunk:', x, z, lod);
@@ -154,7 +168,7 @@ export default class ChunkLoader {
     const chunk = this.getChunk(x, z);
 
     // Chunks have the possibility of unloading before this callback
-    if (!chunk) return console.warn('Received uninitialized chunk', x, z, lod);
+    if (!chunk) return console.warn('Received uninitialized chunk', chunkData);
 
     chunk.setTerrain(chunkData);
 
@@ -167,19 +181,16 @@ export default class ChunkLoader {
       this.initialLoad?.complete();
   }
 
-  followPos = null;
-  setFollower(pos) {
+  followPos: THREE.Vector3 | null = null;
+  setFollower(pos: THREE.Vector3 | null) {
     this.followPos = pos;
     return this;
   }
 
-  prevFollowPos = null;
+  prevFollowPos: THREE.Vector3 | null = null;
 
   followerUpdateDistSq = (Chunk.SIZE / 2) ** 2;
 
-  /**
-   * @param {THREE.Vector3} followPos
-   */
   updateFromFollower() {
     const followPos = this.followPos;
     if (!followPos) return false;
@@ -230,7 +241,7 @@ export default class ChunkLoader {
   //   // const chunkZ = z2 * 2;
   // }
 
-  unloadChunk(key) {
+  unloadChunk(key: string) {
     const chunk = this.chunks.get(key);
     if (chunk) {
       chunk.dispose();
@@ -240,7 +251,7 @@ export default class ChunkLoader {
     }
   }
 
-  getHeightAt(x, z) {
+  getHeightAt(x: number, z: number) {
     const coords = ChunkLoader.worldPosToChunk(x, z);
     const chunk = this.getChunk(coords.x, coords.z);
 

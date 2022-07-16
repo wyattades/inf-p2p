@@ -206,6 +206,9 @@ export default class Vehicle {
 
   vehicleSteering = 0;
 
+  /** @type {THREE.Vector3} */
+  position;
+
   /**
    * @param {import('src/Game').default} game
    */

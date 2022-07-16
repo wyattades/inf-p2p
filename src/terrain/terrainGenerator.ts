@@ -1,4 +1,4 @@
-import Seedrandom from 'seedrandom';
+import seedRandom from 'seedrandom';
 import SimplexNoise from 'simplex-noise';
 import createBezierEasing from 'bezier-easing';
 import { round } from 'lodash-es';
@@ -28,11 +28,22 @@ const genNoiseMap = ({
   seed,
   scale = 1.0,
   octaves = 1,
-  persistance = 1.0, // how much the amplitude of the wave changes between octaves
-  lacunarity = 1.0, // how much the frequency of the wave changes between octaves
+  persistance = 1.0,
+  lacunarity = 1.0,
   offset = { x: 0.0, y: 0.0 },
   size,
   lod = 1,
+}: {
+  seed: string;
+  scale?: number;
+  octaves?: number;
+  // how much the amplitude of the wave changes between octaves
+  persistance?: number;
+  // how much the frequency of the wave changes between octaves
+  lacunarity?: number;
+  offset?: { x: number; y: number };
+  size: number;
+  lod?: number;
 }) => {
   const dataSize = ((size / lod) | 0) + 1;
   // if (!isInteger(dataSize))
@@ -42,7 +53,7 @@ const genNoiseMap = ({
 
   const noiseMap = new Float32Array(dataSize * dataSize);
 
-  const prng = new Seedrandom(seed);
+  const prng = seedRandom(seed);
   const simplex = new SimplexNoise(seed);
 
   let maxHeight = 0.0;
@@ -95,12 +106,12 @@ const genNoiseMap = ({
 };
 
 export const generateNoiseMap = (
-  seed,
-  chunkX,
-  chunkZ,
-  lod,
-  passIndex,
-  segments,
+  seed: string,
+  chunkX: number,
+  chunkZ: number,
+  lod: number,
+  passIndex: number,
+  segments: number,
 ) => {
   const params = PASSES[passIndex];
 
@@ -124,7 +135,10 @@ const SECONDARY_AMPLITUDE = 80.0;
 
 const ADDITION = -30.0;
 
-export const generateHeightMap = (noiseMap, secondary) => {
+export const generateHeightMap = (
+  noiseMap: Float32Array,
+  secondary: Float32Array,
+) => {
   for (let i = 0; i < noiseMap.length; i++) {
     noiseMap[i] = round(
       heightCurve(noiseMap[i]) * AMPLITUDE +

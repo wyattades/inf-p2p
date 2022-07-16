@@ -28,7 +28,7 @@ export const serializeGeometry = (geometry: THREE.BufferGeometry) => {
   };
 };
 
-type SerializedGeometry = ReturnType<typeof serializeGeometry>;
+export type SerializedGeometry = ReturnType<typeof serializeGeometry>;
 
 export const deserializeGeometry = ({
   attributes,

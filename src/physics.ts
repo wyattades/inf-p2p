@@ -1,11 +1,12 @@
 import * as THREE from 'three';
+import type * as RapierType from '@dimforge/rapier3d';
 
 import { ZERO_VECTOR3 } from 'src/utils/empty';
 
 const Vector3 = THREE.Vector3; // it doesn't matter which Vector3 we use
 
-/** @type {import('@dimforge/rapier3d')} */
-export let RAPIER;
+// eslint-disable-next-line import/no-mutable-exports
+export let RAPIER: typeof RapierType;
 
 export const loadPhysicsModule = async () => {
   RAPIER = await import('@dimforge/rapier3d');
@@ -13,29 +14,42 @@ export const loadPhysicsModule = async () => {
 
 export const GRAVITY = -9.82 * 8;
 
+type GameObject = THREE.Object3D;
+
 export class Body {
-  /**
-   * @param {Pick<import('three').Object3D, 'position' | 'quaternion'>} obj
-   * @param {Physics} physics
-   */
+  world: RapierType.World;
+  rigidBody: RapierType.RigidBody;
+
   constructor(
-    obj,
-    physics,
+    obj: {
+      position: Point3;
+      quaternion: Quaternion;
+    },
+    physics: Physics,
     {
       bodyType = RAPIER.RigidBodyType.Dynamic,
       lockRotation = false,
       lockTranslation = false,
-      angularDamping = null,
-      linearDamping = null,
-      mass = null,
+      angularDamping,
+      linearDamping,
+      mass,
       type = 'unknown',
       userData = {},
+    }: {
+      bodyType?: RapierType.RigidBodyType;
+      lockRotation?: boolean;
+      lockTranslation?: boolean;
+      angularDamping?: number;
+      linearDamping?: number;
+      mass?: number;
+      type?: string;
+      userData?: Record<string, any>;
     } = {},
   ) {
     this.world = physics.world;
 
     let desc = new RAPIER.RigidBodyDesc(bodyType)
-      .setTranslation(...obj.position.toArray())
+      .setTranslation(obj.position.x, obj.position.y, obj.position.z)
       .setRotation(obj.quaternion);
 
     if (mass != null) desc = desc.setAdditionalMass(mass);
@@ -56,14 +70,15 @@ export class Body {
     };
   }
 
-  addCollider(colliderDesc) {
+  addCollider(colliderDesc: RapierType.ColliderDesc) {
     return this.world.createCollider(colliderDesc, this.rigidBody);
   }
 
+  _getSpeed?: THREE.Vector3;
   getSpeed() {
-    this._getSpeed ||= new THREE.Vector3();
-
-    return this._getSpeed.copy(this.rigidBody.linvel()).length();
+    return (this._getSpeed ||= new THREE.Vector3())
+      .copy(this.rigidBody.linvel() as THREE.Vector3)
+      .length();
   }
 
   get colliders() {
@@ -74,18 +89,21 @@ export class Body {
   }
 
   resetMovement() {
-    this.rigidBody.setLinvel(ZERO_VECTOR3);
-    this.rigidBody.setAngvel(ZERO_VECTOR3);
+    this.rigidBody.setLinvel(ZERO_VECTOR3 as Point3, false);
+    this.rigidBody.setAngvel(ZERO_VECTOR3 as Point3, false);
   }
 
-  copyToObj(obj, excludeRotation = false) {
-    obj.position.copy(this.rigidBody.translation());
+  copyToObj(obj: GameObject, excludeRotation = false) {
+    obj.position.copy(this.rigidBody.translation() as THREE.Vector3);
     if (!excludeRotation)
-      obj.setRotationFromQuaternion(this.rigidBody.rotation());
+      obj.setRotationFromQuaternion(
+        this.rigidBody.rotation() as THREE.Quaternion,
+      );
   }
-  copyFromObj(obj, excludeRotation = false) {
-    this.rigidBody.setTranslation(obj.position);
-    if (!excludeRotation) this.rigidBody.setRotation(obj.quaternion);
+  copyFromObj(obj: GameObject, excludeRotation = false) {
+    this.rigidBody.setTranslation(obj.position as Point3, true);
+    if (!excludeRotation)
+      this.rigidBody.setRotation(obj.quaternion as Quaternion, false);
   }
 
   // registerContactListener() {
@@ -126,22 +144,23 @@ export class Body {
     // this.unregisterContactListener();
     // removes the RigidBody and Colliders
     this.world.removeRigidBody(this.rigidBody);
+    // @ts-expect-error can't assign null
     this.rigidBody = null;
   }
 }
 
 // add 2 Vector3s
-const add = (a, b) => {
+const add = (a: Point3, b: Point3) => {
   const c = { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z };
   return c;
   // return new THREE.Vector3(c.x, c.y, c.z);
 };
 
-const _pos = new THREE.Vector3(),
-  _quat = new THREE.Quaternion();
-const rot = (pos, quat) => {
-  return _pos.copy(pos).applyQuaternion(_quat.copy(quat));
-};
+// const _pos = new THREE.Vector3(),
+//   _quat = new THREE.Quaternion();
+// const rot = (pos, quat) => {
+//   return _pos.copy(pos).applyQuaternion(_quat.copy(quat));
+// };
 
 const COLORS = {
   red: new THREE.Color(0xff0000),
@@ -151,6 +170,9 @@ const COLORS = {
 };
 
 export class Physics {
+  world: RapierType.World;
+  eventQueue?: RapierType.EventQueue;
+
   constructor() {
     const gravity = new Vector3(0.0, GRAVITY, 0.0);
 
@@ -200,18 +222,18 @@ export class Physics {
   //   console.log(contacts);
   // }
 
-  printPairs(obj) {
-    const a = new Set();
-    for (const [h1, o] of Object.entries(obj))
-      for (const h2 of Object.keys(o)) a.add([h1, h2].sort().join('-'));
-    if (a.size > 0) console.log(...a.keys());
-  }
+  // printPairs(obj) {
+  //   const a = new Set();
+  //   for (const [h1, o] of Object.entries(obj))
+  //     for (const h2 of Object.keys(o)) a.add([h1, h2].sort().join('-'));
+  //   if (a.size > 0) console.log(...a.keys());
+  // }
 
   // TODO
-  isProximitied(colliderHandle) {
-    return false;
-    // return !isEmpty(this.proximities[colliderHandle]);
-  }
+  // isProximitied(colliderHandle) {
+  //   return false;
+  //   // return !isEmpty(this.proximities[colliderHandle]);
+  // }
 
   // handleProximityEvent = (collider1, collider2, prevProx, prox) => {
   //   // console.log('prox', collider1, collider2, prevProx, prox);
@@ -243,7 +265,7 @@ export class Physics {
   // };
 
   lastError = null;
-  update(_delta, _tick) {
+  update(_delta: number, _tick: number) {
     // this.world.step(this.eventQueue);
     this.world.step();
 
@@ -251,18 +273,19 @@ export class Physics {
     // this.eventQueue.drainProximityEvents(this.handleProximityEvent);
   }
 
-  debugForces = {};
-  updateDebugForce(key, orig, force) {
+  debugForces: Record<string, [Point3, Point3]> = {};
+  updateDebugForce(key: string, orig: Point3, force: Point3) {
     if (!this._debugMesh) return;
 
     if (!orig) delete this.debugForces[key];
     else this.debugForces[key] = [orig, add(orig, force)];
   }
 
+  _debugMesh?: THREE.LineSegments;
   debugMesh() {
-    const points = [];
-    const colors = [];
-    const addLine = (p1, p2, color) => {
+    const points: Point3[] = [];
+    const colors: THREE.Color[] = [];
+    const addLine = (p1: Point3, p2: Point3, color: THREE.Color) => {
       points.push(p1, p2);
       colors.push(color, color);
     };
@@ -271,11 +294,9 @@ export class Physics {
       addLine(p1, p2, COLORS.yellow);
     }
 
-    // const bodies = {};
-
     this.world.bodies.forEach((body) => {
       if (body.isDynamic()) {
-        if (body.userData.type === 'player') return;
+        if ((body.userData as { type: string }).type === 'player') return;
 
         const position = body.translation();
 
@@ -320,13 +341,18 @@ export class Physics {
       );
     }
 
-    mesh.geometry.attributes.position.array.fill(0);
-    mesh.geometry.attributes.position.copyVector3sArray(points);
-    mesh.geometry.attributes.position.needsUpdate = true;
+    const { position, color } = mesh.geometry.attributes as {
+      position: THREE.BufferAttribute;
+      color: THREE.BufferAttribute;
+    };
 
-    mesh.geometry.attributes.color.array.fill(0);
-    mesh.geometry.attributes.color.copyColorsArray(colors);
-    mesh.geometry.attributes.color.needsUpdate = true;
+    (position.array as Float32Array).fill(0);
+    position.copyVector3sArray(points);
+    position.needsUpdate = true;
+
+    (color.array as Float32Array).fill(0);
+    color.copyColorsArray(colors);
+    color.needsUpdate = true;
 
     return mesh;
   }

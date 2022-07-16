@@ -5,6 +5,8 @@ import { Body, RAPIER } from 'src/physics';
 import { ZERO_QUATERNION } from 'src/utils/empty';
 import { deserializeGeometry } from 'src/utils/geometry';
 import { enforceSqrt } from 'src/utils/math';
+import type Game from 'src/Game';
+import type { LoadChunkResponse } from 'src/terrain/terrain.worker';
 
 // or MeshLambertMaterial?
 const groundMaterial = new THREE.MeshPhongMaterial({
@@ -33,22 +35,20 @@ const groundRayCaster = new THREE.Raycaster(
 export default class Chunk {
   static SIZE = CHUNK_SEGMENTS * SEGMENT_SIZE;
 
-  /**
-   * @param {import('src/Game').default} game
-   * @param {THREE.Group} group
-   * @param {number} x
-   * @param {number} z
-   */
-  constructor(game, group, x, z) {
-    this.game = game;
-    this.group = group;
-    this.x = x;
-    this.z = z;
-    this.lod = null;
-    this.mesh = null;
-  }
+  lod: number | null = null;
+  mesh: THREE.Mesh | null = null;
+  body: Body | null = null;
+  heightsArray: Float32Array | null = null;
+  debugChunkBoundsMesh: THREE.LineSegments | null = null;
 
-  static loadKeyFor(x, z) {
+  constructor(
+    readonly game: Game,
+    readonly group: THREE.Group,
+    readonly x: number,
+    readonly z: number,
+  ) {}
+
+  static loadKeyFor(x: number, z: number) {
     return `${x},${z}`;
   }
 
@@ -68,7 +68,7 @@ export default class Chunk {
     );
   }
 
-  getHeightAt(x, z) {
+  getHeightAt(x: number, z: number) {
     // TODO: not accurate
     if (!this.mesh) return -99998;
 
@@ -81,7 +81,7 @@ export default class Chunk {
   }
 
   enablePhysics() {
-    // for now, we'll use lod === 1 to test if we should enable physics.
+    // for now, we'll use the base LOD to test if we should enable physics.
     if (this.lod !== LODs[0]) {
       this.body?.dispose();
       this.body = null;
@@ -122,7 +122,7 @@ export default class Chunk {
     // this.body.renderWireframe(this.group);
   }
 
-  setTerrain({ lod, heightsArray, ...serializedGeometry }) {
+  setTerrain({ lod, heightsArray, ...serializedGeometry }: LoadChunkResponse) {
     // TODO: there could be a race condition here where lower-res terrain takes priority over higher-res
     if (lod !== this.lod)
       return console.warn(
@@ -144,11 +144,11 @@ export default class Chunk {
     this.mesh.updateMatrix();
 
     this.mesh.castShadow = this.mesh.receiveShadow =
-      !!this.game.options.get('shadows');
+      !!this.game.options!.get('shadows');
 
     this.group.add(this.mesh);
 
-    if (this.game.options.get('debug')) {
+    if (this.game.options!.get('debug')) {
       this.debugChunkBoundsMesh = new THREE.LineSegments(
         new THREE.EdgesGeometry(
           new THREE.BoxGeometry(Chunk.SIZE, 512, Chunk.SIZE),
@@ -176,7 +176,7 @@ export default class Chunk {
     if (this.debugChunkBoundsMesh) {
       this.group.remove(this.debugChunkBoundsMesh);
       this.debugChunkBoundsMesh.geometry.dispose();
-      this.debugChunkBoundsMesh.material.dispose();
+      (this.debugChunkBoundsMesh.material as THREE.Material).dispose();
       this.debugChunkBoundsMesh = null;
     }
   }

@@ -10,6 +10,7 @@
     "incremental": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "downlevelIteration": true,
     "module": "esnext",
     "moduleResolution": "node",
     "forceConsistentCasingInFileNames": true,

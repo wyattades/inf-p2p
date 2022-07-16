@@ -1,16 +1,17 @@
 import * as THREE from 'three';
 
+import type Game from 'src/Game';
+
 export default class FlyControls {
-  /** @param {import('src/Game').default} game */
-  constructor(game) {
-    this.game = game;
-    this.object = game.camera;
+  object: THREE.PerspectiveCamera;
+  constructor(readonly game: Game) {
+    this.object = game.camera!;
   }
 
   _motion = new THREE.Vector3();
   _velocity = new THREE.Vector3();
   _motionRotation = new THREE.Matrix4();
-  update(delta) {
+  update(delta: number, _tick: number) {
     const { x: rotAngleX, y: rotAngleY } = this.game.controls.rotation;
 
     // Apply controls to motion

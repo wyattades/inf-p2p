@@ -24,37 +24,63 @@ import { GameState } from 'src/GameState';
 import Saver from 'src/Saver';
 import FlyControls from 'src/FlyControls';
 import { Physics, loadPhysicsModule } from 'src/physics';
+import Vehicle from './objects/Vehicle';
+import type Client from './Client'; // TODO
+import Box from './objects/Box';
 // import Box from 'src/objects/Box';
 
 const SIMULATION_SPEED = 1000 / 60;
 
 const canReadStorage = memoize(() => !!window.navigator?.storage?.estimate);
 
+declare global {
+  interface Window {
+    GAME?: Game;
+    cheat?: any;
+  }
+}
+
 export default class Game {
   initialized = false;
+  disposed?: boolean;
   events = new EventEmitter();
 
-  /** @type {GameState | null} */
-  state = null;
+  state: GameState | null = null;
+  // @ts-expect-error undef
+  physics: Physics;
+  // @ts-expect-error undef
+  chunkLoader: ChunkLoader;
+  // @ts-expect-error undef
+  controls: Controls;
+  // @ts-expect-error undef
+  options: Options;
+  // @ts-expect-error undef
+  camera: THREE.PerspectiveCamera;
+  // @ts-expect-error undef
+  ui: UI;
+  // @ts-expect-error undef
+  saver: Saver;
+  // @ts-expect-error undef
+  objectGroup: THREE.Group;
+  // @ts-expect-error undef
+  mainLoop: MainLoop;
+  client?: Client;
 
-  /** @type {THREE.Scene} */
-  scene;
+  // @ts-expect-error undef
+  player: Player;
+  flyControls: FlyControls | null = null;
+  vehicle?: Vehicle | null;
 
-  /** @type {Physics} */
-  physics;
+  // @ts-expect-error undef
+  scene: THREE.Scene;
+  // @ts-expect-error undef
+  sky: Sky;
+  // @ts-expect-error undef
+  renderer: THREE.WebGLRenderer;
+  // @ts-expect-error undef
+  effectComposer: EffectComposer;
 
-  /** @type {ChunkLoader} */
-  chunkLoader;
-
-  /** @type {Player} */
-  player;
-
-  /** @type {Controls} */
-  controls;
-
-  constructor(canvas) {
-    this.canvas = canvas;
-  }
+  constructor(readonly canvas: HTMLCanvasElement) {}
 
   async preload() {
     await loadPhysicsModule();
@@ -108,11 +134,11 @@ export default class Game {
       // add window hacks
       window.GAME = this;
       window.cheat = {
-        setPos: (x, y, z) => {
+        setPos: (x: number, y: number, z: number) => {
           this.player.setPos(x, y, z);
-          this.loadTerrain().catch(console.error);
+          this.chunkLoader.updateFromFollower();
         },
-        setTime: (hour) => this.setTime(hour),
+        setTime: (hour: number) => this.setTime(hour),
       };
     }
 
@@ -235,6 +261,8 @@ export default class Game {
     this.render();
   };
 
+  hemiLight?: THREE.HemisphereLight;
+  dirLight?: THREE.DirectionalLight;
   createLights() {
     if (this.hemiLight) {
       this.hemiLight.dispose();
@@ -283,7 +311,9 @@ export default class Game {
     this.scene.add(this.dirLight.target);
   }
 
-  setTime(hour) {
+  time = 0;
+  tick = 0;
+  setTime(hour: number) {
     this.time = hour % 24.0;
     const norm = hour / 24;
     const angle = -norm * 2 * Math.PI - Math.PI / 2;
@@ -328,7 +358,7 @@ export default class Game {
     this.updatePositionStats(this.player.position);
   }
 
-  followType = null;
+  followType: 'vehicle' | null = null;
 
   async start() {
     await this.loadTerrain();
@@ -338,7 +368,9 @@ export default class Game {
 
     this.controls.bindControls();
 
-    this.controls.bindPress('toggleInfo', () => this.ui.toggleInfo());
+    this.controls.bindPress('toggleInfo', () =>
+      this.options.set('showUi', !this.options.get('showUi')),
+    );
     this.controls.bindPress('toggleMenu', () => {
       if (this.state === GameState.PAUSED) {
         // when user presses ESC: first, pointerlockchange is triggered. then immediately after, this callback is triggered
@@ -391,7 +423,7 @@ export default class Game {
   }
 
   // TODO: Fancier state transitions?
-  setState(newState) {
+  setState(newState: GameState) {
     const oldState = this.state;
 
     this.state = newState;
@@ -430,21 +462,22 @@ export default class Game {
     this.controls?.clearPresses();
   }
 
-  enemyUpdate = (data) => {
-    if (!this.enemy) return;
+  // enemy?: THREE.Object3D;
+  // enemyUpdate = (data) => {
+  //   if (!this.enemy) return;
 
-    if (!data) {
-      console.warn('Bad data');
-      return;
-    }
+  //   if (!data) {
+  //     console.warn('Bad data');
+  //     return;
+  //   }
 
-    this.enemy.position.copy(data.position);
-    this.enemy.position.y -= 3;
-    this.enemy.rotation.z = data.rotation.y + Math.PI;
-  };
+  //   this.enemy.position.copy(data.position);
+  //   this.enemy.position.y -= 3;
+  //   this.enemy.rotation.z = data.rotation.y + Math.PI;
+  // };
 
   relativeCameraOffset = new THREE.Vector3(0, 7, -10);
-  cameraFollowVehicle(obj) {
+  cameraFollowVehicle(obj: Vehicle) {
     const cameraOffset = this.relativeCameraOffset
       .clone()
       .applyMatrix4(obj.matrixWorld);
@@ -458,25 +491,25 @@ export default class Game {
     this.camera.lookAt(lookAtPos);
   }
 
-  cameraFollowPlayer(player) {
+  cameraFollowPlayer(player: Player) {
     this.camera.position.copy(player.position);
     this.camera.rotation.copy(player.object.rotation);
   }
 
-  updatePositionStats(position) {
+  updatePositionStats(position: Point3) {
     const { x: chunkX, z: chunkZ } = ChunkLoader.worldPosToChunk(
       position.x,
       position.z,
     );
 
-    this.ui.set('chunkX', chunkX.toString());
-    this.ui.set('chunkZ', chunkZ.toString());
+    this.ui.set('chunkX', chunkX);
+    this.ui.set('chunkZ', chunkZ);
     this.ui.set('x', position.x.toFixed(2));
     this.ui.set('y', position.y.toFixed(2));
     this.ui.set('z', position.z.toFixed(2));
   }
 
-  updateEnd = (fps, panic) => {
+  updateEnd = (fps: number, panic: boolean) => {
     this.ui.set('FPS', Math.round(fps));
 
     if (panic) {
@@ -486,15 +519,17 @@ export default class Game {
     }
   };
 
-  update(delta) {
+  update(delta: number) {
     if (this.flyControls) {
       this.flyControls.update(delta, this.tick);
     } else {
       this.player?.update(delta, this.tick);
     }
     this.vehicle?.update(delta, this.tick);
-    for (const obj of this.objectGroup.children)
-      obj.gameObject.update(delta, this.tick);
+    for (const obj of this.objectGroup.children) {
+      // @ts-expect-error TODO better way to iterate objects
+      obj.gameObject?.update(delta, this.tick);
+    }
 
     // Physics
     this.physics.update(delta, this.tick);
@@ -552,7 +587,7 @@ export default class Game {
     if (this.tick % 10 === 0) {
       this.setTime(this.time);
 
-      this.ui.set('tick', this.tick.toString());
+      this.ui.set('tick', this.tick);
     }
 
     if (this.tick % 5 === 0 && this.options.get('debug')) {
@@ -562,12 +597,14 @@ export default class Game {
     if (this.tick % 200 === 0 && canReadStorage()) {
       // console.log(this.renderer.info.memory.geometries);
       navigator.storage.estimate().then(({ quota, usage }) => {
-        this.ui.set(
-          'storage',
-          `${((usage / quota) * 100) | 0}% (${(usage / 1000000) | 0}/${
-            (quota / 1000000) | 0
-          } MB)`,
-        );
+        if (quota && usage) {
+          this.ui.set(
+            'storage',
+            `${((usage / quota) * 100) | 0}% (${(usage / 1000000) | 0}/${
+              (quota / 1000000) | 0
+            } MB)`,
+          );
+        }
       });
     }
 

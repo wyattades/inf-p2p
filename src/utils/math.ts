@@ -26,6 +26,9 @@ export const clamp = (val: number, min: number, max: number) => {
   return val;
 };
 
+export const isNumber = (v: any): v is number =>
+  typeof v === 'number' && !Number.isNaN(v);
+
 export const toNum = (input: any): number | null => {
   let num: number | undefined;
   if (typeof num === 'string') num = Number(input);

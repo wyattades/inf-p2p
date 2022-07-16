@@ -2,7 +2,7 @@ import { isInteger } from 'lodash-es';
 import { BufferAttribute, PlaneGeometry } from 'three';
 
 import { SEGMENT_SIZE, CHUNK_SEGMENTS, LODs } from 'src/constants';
-import { serializeGeometry } from 'src/utils/geometry';
+import { SerializedGeometry, serializeGeometry } from 'src/utils/geometry';
 import { enforceSqrt } from 'src/utils/math';
 // import Perf from 'src/utils/Perf';
 import { DEV } from 'src/env';
@@ -10,6 +10,25 @@ import { DEV } from 'src/env';
 import MapCache from './MapCache';
 import { generateHeightMap, generateNoiseMap } from './terrainGenerator';
 import { iterateColorMap } from './colorMap';
+
+const workerScope = self as unknown as Worker;
+
+export type LoadChunkRequest = {
+  x: number;
+  z: number;
+  lod: number;
+  caching: boolean;
+};
+
+type GeneratedChunkData = {
+  heightsArray: Float32Array;
+} & SerializedGeometry;
+
+export type LoadChunkResponse = {
+  x: number;
+  z: number;
+  lod: number;
+} & GeneratedChunkData;
 
 console.log('Init terrain worker');
 
@@ -33,7 +52,11 @@ const PLANE_GEOMS = LODs.map((lod) => {
 });
 
 // convert array from row-major to column-major (for 2d square representation)
-const rowToColumnMajor = (from, to = new from.constructor(from.length)) => {
+const rowToColumnMajor = <ArrayType extends number[] | Float32Array>(
+  from: ArrayType,
+  // @ts-expect-error `from.constructor` is `Function`
+  to = new from.constructor(from.length) as ArrayType,
+): ArrayType => {
   const l = enforceSqrt(from.length);
 
   for (let i = 0; i < l; i++) {
@@ -73,7 +96,11 @@ const rowToColumnMajor = (from, to = new from.constructor(from.length)) => {
 
 const SEED = 'The-0rig1n-oF-lif3';
 
-const generateChunk = (x, z, lod) => {
+const generateChunk = (
+  x: number,
+  z: number,
+  lod: number,
+): GeneratedChunkData => {
   // const perf = new Perf(`generateChunk ${x},${z} | ${lod} : `);
 
   // perf.start(`geom.clone`);
@@ -103,7 +130,7 @@ const generateChunk = (x, z, lod) => {
     colorItemSize,
     true,
   );
-  const colorArray = colorAttr.array;
+  const colorArray = colorAttr.array as Uint8Array;
   let ci = 0;
   for (const ch of iterateColorMap(heightMap, secondary)) {
     colorArray[ci] = colorArray[ci + 3] = colorArray[ci + 6] = ch.r;
@@ -117,7 +144,7 @@ const generateChunk = (x, z, lod) => {
   // mutates `heightMap`
   heightMap = generateHeightMap(heightMap, secondary);
 
-  const positionArray = geom.attributes.position.array;
+  const positionArray = geom.attributes.position.array as Float32Array;
 
   // if (lod > 1) {
   //   // TODO: this creates ugly ditches
@@ -154,7 +181,7 @@ const generateChunk = (x, z, lod) => {
 };
 
 // TODO: send error message on failure?
-const loadChunk = async ({ x, z, lod, caching }) => {
+const loadChunk = async ({ x, z, lod, caching }: LoadChunkRequest) => {
   if (!isInteger(x) || !isInteger(z) || !LODs.includes(lod))
     return console.warn(`Invalid loadChunk args: ${x},${z}:${lod}`);
 
@@ -163,8 +190,8 @@ const loadChunk = async ({ x, z, lod, caching }) => {
   if (DEV) console.debug('terrain.worker request loadChunk:', x, z, lod);
 
   // Attempt to load from cache
-  /** @type {ReturnType<typeof generateChunk>} */
-  let chunkData;
+
+  let chunkData: GeneratedChunkData | undefined;
   if (shouldUseCache) {
     // Perf.default.start(`mapCache.loadChunk: ${x},${z} | ${lod}`);
     try {
@@ -193,12 +220,20 @@ const loadChunk = async ({ x, z, lod, caching }) => {
 
   if (DEV) console.debug('terrain.worker sending chunk:', x, z, lod);
 
-  self.postMessage(
-    { cmd: 'terrain', x, z, lod, ...chunkData },
+  workerScope.postMessage(
+    {
+      cmd: 'terrain',
+      x,
+      z,
+      lod,
+      ...chunkData,
+    } as LoadChunkResponse,
     [
       chunkData.heightsArray.buffer,
-      chunkData.indexAttribute?.array.buffer,
-      ...Object.values(chunkData.attributes).map((attr) => attr?.array.buffer),
+      (chunkData.indexAttribute?.array as Int32Array)?.buffer,
+      ...Object.values(chunkData.attributes).map(
+        (attr) => (attr?.array as Float32Array)?.buffer,
+      ),
     ].filter(Boolean),
   );
 };
@@ -220,7 +255,7 @@ const clearCache = async () => {
 //   for (const chunk of chunks) loadChunk(chunk);
 // };
 
-self.onmessage = async ({ data }) => {
+workerScope.onmessage = async ({ data }) => {
   // console.debug('terrain.worker onmessage:', data);
 
   let res = null,
@@ -241,11 +276,11 @@ self.onmessage = async ({ data }) => {
     }
   } catch (err) {
     console.error('terrain.worker error:', err);
-    error = err;
+    error = err as Error;
   }
 
   if (data.cmdId != null)
-    self.postMessage({
+    workerScope.postMessage({
       cmd: 'worker_response',
       cmdId: data.cmdId,
       response: res,

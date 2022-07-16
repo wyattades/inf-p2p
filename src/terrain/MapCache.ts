@@ -8,7 +8,7 @@ export default class MapCache {
 
   _createDbPromise?: Promise<IDBPDatabase>;
 
-  constructor(name: string, private readonly version = 5) {
+  constructor(name: string, private readonly version = 6) {
     this.storeName = `chunks-${name}`;
     this.disabled = false; // May enable for development
 

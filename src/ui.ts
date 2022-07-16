@@ -12,13 +12,15 @@ const DEBUG_STATS = {
 };
 
 export default class UI {
-  debugStats = { ...DEBUG_STATS };
+  debugStats: Record<keyof typeof DEBUG_STATS, null | string> = {
+    ...DEBUG_STATS,
+  };
 
   events = new EventEmitter();
 
-  set(key, val) {
+  set(key: keyof typeof DEBUG_STATS, val: number | string | null) {
     if (key in this.debugStats) {
-      this.debugStats[key] = val;
+      this.debugStats[key] = val?.toString();
       this.events.emit('update_stats', this.debugStats);
     } else console.info('Invalid option key:', key);
   }

@@ -29,7 +29,7 @@ export const useOptions = () => {
     true,
   );
 
-  const setOption = (key: string, val: string | number | boolean) => {
+  const setOption: typeof options.set = (key, val) => {
     options.set(key, val);
   };
 

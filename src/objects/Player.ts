@@ -2,11 +2,12 @@ import * as THREE from 'three';
 
 import { Body, RAPIER } from 'src/physics';
 import { clamp } from 'src/utils/math';
+import type Game from 'src/Game';
 
 // TODO seperate keyevents, player, and physics
 
 const _clamp = new THREE.Vector2(0, 0);
-const clampXZ = (vec3, max) => {
+const clampXZ = (vec3: Point3, max: number) => {
   _clamp.set(vec3.x, vec3.z);
 
   const length = _clamp.length();
@@ -30,17 +31,12 @@ const restitution = 0.15;
 const floorColliderDist = 1.0;
 
 export default class Player {
-  /**
-   * @param {import('src/Game').default} game
-   */
-  constructor(game) {
-    this.game = game;
+  object = new THREE.Object3D();
+  position = this.object.position;
+  rotation = this.object.rotation;
+  body: Body;
 
-    this.object = new THREE.Object3D();
-    // this.game.scene.add(this.object);
-    this.position = this.object.position;
-    this.rotation = this.object.rotation;
-
+  constructor(readonly game: Game) {
     this.body = new Body(this.object, this.game.physics, {
       lockRotation: true,
       type: 'player',
@@ -65,7 +61,7 @@ export default class Player {
     // this.body.registerContactListener();
   }
 
-  setPos(x, y, z) {
+  setPos(x: number | null, y: number | null, z: number | null) {
     const pos = this.position;
     pos.set(x ?? pos.x, y ?? pos.y, z ?? pos.z);
 
@@ -77,7 +73,7 @@ export default class Player {
     return this.body.rigidBody.linvel();
   }
 
-  onGround(groundHeight) {
+  onGround(groundHeight: number) {
     // FIXME: for some reason proximity events are not emitted when colliding with terrain
     // (static bodies) so we need to use the getHeightAt code below
     // if (this.game.physics.isProximitied(this.floorColliderHandle)) return true;
@@ -90,7 +86,7 @@ export default class Player {
   _motion = new THREE.Vector3();
   _motionRotation = new THREE.Matrix4();
   lastJumpAt = -9999;
-  update(_delta, tick) {
+  update(_delta: number, tick: number) {
     const { x: rotAngleX, y: rotAngleY } = this.game.controls.rotation;
 
     // Apply controls to motion
@@ -158,7 +154,7 @@ export default class Player {
     // debug:
     // console.log(onGround, groundHeight, motion.x, motion.y, motion.z);
 
-    this.body.rigidBody.resetForces();
+    this.body.rigidBody.resetForces(true);
     if (motion.lengthSq() > 0) {
       this.body.rigidBody.addForce(motion, true);
 
@@ -168,7 +164,7 @@ export default class Player {
     const clampedVel = clampXZ(updateVel || linvel, maxSpeed);
     if (clampedVel) updateVel = clampedVel;
 
-    if (updateVel) this.body.rigidBody.setLinvel(updateVel);
+    if (updateVel) this.body.rigidBody.setLinvel(updateVel, true);
 
     // const drag = 0.91; // TODO: Use slope
 

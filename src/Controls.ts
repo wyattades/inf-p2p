@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 import { GameState } from 'src/GameState';
 import EventManager from 'src/utils/EventManager';
+import type Game from 'src/Game';
 
 // TODO gamepad support, cars???
 
@@ -21,24 +22,25 @@ const DEFAULT_KEYBINDS = {
   toggleCamera: 'c',
 };
 
+type KeyBindName = keyof typeof DEFAULT_KEYBINDS;
+
 export default class Controls {
-  /** @param {import('src/Game')} game */
-  constructor(game) {
-    this.game = game;
+  rotation = new THREE.Vector2(0, 0);
+  private canvas: HTMLCanvasElement;
+  private keybinds: Record<number, KeyBindName> = {};
+  keystate: Record<string, boolean> = {};
+  private keyCallbacks: Record<string, () => void> = {};
+  private em = new EventManager();
 
-    this.rotation = new THREE.Vector2(0, 0);
-
+  constructor(readonly game: Game) {
     this.canvas = game.canvas;
 
-    // TODO save in localStorage
-    this.keybinds = {};
-
-    this.keystate = {};
     for (const bindName in DEFAULT_KEYBINDS) {
-      this.setKeyBind(bindName, DEFAULT_KEYBINDS[bindName]);
+      this.setKeyBind(
+        bindName as KeyBindName,
+        DEFAULT_KEYBINDS[bindName as KeyBindName],
+      );
     }
-
-    this.em = new EventManager();
   }
 
   pauseFromPlaying() {
@@ -63,17 +65,19 @@ export default class Controls {
     this.em.on(document, 'blur', this.onVisibilityChange);
     this.em.on(document.body, 'mouseleave', this.onMouseLeaveBody);
 
+    // @ts-expect-error fallback
     this.canvas.requestPointerLock ||= this.canvas.mozRequestPointerLock;
+    // @ts-expect-error fallback
     document.exitPointerLock ||= document.mozExitPointerLock;
 
-    this.bindPointerLock('on', this.onPointerLockChange);
+    this.bindPointerLock(this.onPointerLockChange);
   }
 
-  bindPointerLock(action, cb) {
+  bindPointerLock(cb: () => void) {
     if ('onpointerlockchange' in document) {
-      this.em[action](document, 'pointerlockchange', cb);
+      this.em.on(document, 'pointerlockchange', cb);
     } else if ('onmozpointerlockchange' in document) {
-      this.em[action](document, 'mozpointerlockchange', cb);
+      this.em.on(document, 'mozpointerlockchange', cb);
     }
   }
 
@@ -117,12 +121,12 @@ export default class Controls {
     else if (this.game.state === GameState.PLAYING) this.lockPointer();
   };
 
-  onMousemove = (evt) => {
+  onMousemove = (evt: MouseEvent) => {
     if (this.game.state === GameState.PLAYING) {
-      const sensitivity = this.game.options.get('mouseSensitivity') / 3000;
+      const sensitivity = this.game.options!.get('mouseSensitivity') / 3000;
 
-      let mx = evt.movementX,
-        my = evt.movementY;
+      const mx = evt.movementX;
+      let my = evt.movementY;
 
       if (my === 1 && mx === 0) my = 0; // fixes mouse moving on its own on Windows 10 Firefox
 
@@ -139,35 +143,32 @@ export default class Controls {
     }
   };
 
-  /** @param {KeyboardEvent} evt */
-  allowKey(evt) {
+  allowKey(evt: KeyboardEvent) {
     if (evt.ctrlKey || evt.metaKey) return true;
     if (/^F\d+$/.test(evt.key)) return true; // allow F<N> keys
     return false;
   }
 
-  onKeydown = (evt) => {
+  onKeydown = (evt: KeyboardEvent) => {
     if (!this.allowKey(evt)) evt.preventDefault();
 
     const bindName = this.keybinds[evt.which];
     if (bindName) {
-      const bind = this.keystate[bindName];
-      if (typeof bind === 'function') bind();
-      else this.keystate[bindName] = true;
+      this.keyCallbacks[bindName]?.();
+      this.keystate[bindName] = true;
     }
   };
 
-  onKeyup = (evt) => {
+  onKeyup = (evt: KeyboardEvent) => {
     if (!this.allowKey(evt)) evt.preventDefault();
 
     const bindName = this.keybinds[evt.which];
     if (bindName) {
-      const bind = this.keystate[bindName];
-      if (typeof bind !== 'function') this.keystate[bindName] = false;
+      this.keystate[bindName] = false;
     }
   };
 
-  static KeyCodeMap = {
+  static KeyCodeMap: Record<string, number> = {
     Shift: 16,
     Control: 17,
     Escape: 27,
@@ -176,34 +177,36 @@ export default class Controls {
     ArrowLeft: 37,
     ArrowRight: 39,
   };
-  setKeyBind(bindName, key) {
+  setKeyBind(bindName: KeyBindName, keyCombo: string) {
     let which;
-    if (key.length === 1) which = key.toUpperCase().charCodeAt(0);
-    else if ((which = Controls.KeyCodeMap[key]));
-    else throw new Error(`setKeyBind: invalid key ${key}`);
+    if (keyCombo.length === 1) which = keyCombo.toUpperCase().charCodeAt(0);
+    else if ((which = Controls.KeyCodeMap[keyCombo])) {
+      // good
+    } else throw new Error(`setKeyBind: invalid keyCombo ${keyCombo}`);
 
     this.keybinds[which] = bindName;
     this.keystate[bindName] = false;
   }
 
-  // isKeyPressed(bindName) {
-  //   return this.keystate[bindName] === true;
-  // }
+  pressed(bindName: KeyBindName) {
+    return this.keystate[bindName] === true;
+  }
 
-  bindPress(bindName, fn) {
+  bindPress(bindName: KeyBindName, fn: () => void) {
     if (bindName in DEFAULT_KEYBINDS) {
-      this.keystate[bindName] = fn;
+      this.keyCallbacks[bindName] = fn;
     } else console.error('Invalid keybind action:', bindName);
   }
 
   clearPresses() {
     for (const bindName in this.keystate) {
-      if (typeof this.keystate[bindName] !== 'function')
-        this.keystate[bindName] = false;
+      this.keystate[bindName] = false;
     }
   }
 
   unbindControls() {
     this.em.off();
+    this.keystate = {};
+    this.keyCallbacks = {};
   }
 }
