@@ -12,17 +12,16 @@ import { LODs } from 'src/constants';
 // ];
 
 export default class ChunkLoader {
-  /** @type {Record<string, Chunk>} */
-  chunks = {};
+  /** @type {Map<string, Chunk>} */
+  chunks = new Map();
   chunkCount = 0;
   loadedCount = 0;
-  playerChunk = null;
 
   hasChunk(x, z) {
-    return Chunk.loadKeyFor(x, z) in this.chunks;
+    return this.chunks.has(Chunk.loadKeyFor(x, z));
   }
   getChunk(x, z) {
-    return this.chunks[Chunk.loadKeyFor(x, z)];
+    return this.chunks.get(Chunk.loadKeyFor(x, z));
   }
 
   static worldPosToChunk(x, z) {
@@ -92,6 +91,8 @@ export default class ChunkLoader {
     this.updateFromFollower();
 
     await this.initialLoad.toPromise();
+
+    this.initialLoad = null;
   }
 
   computeLod(chunkX, chunkZ) {
@@ -131,7 +132,7 @@ export default class ChunkLoader {
 
     if (!chunk) {
       chunk = new Chunk(this.game, this.chunkGroup, x, z);
-      this.chunks[Chunk.loadKeyFor(x, z)] = chunk;
+      this.chunks.set(Chunk.loadKeyFor(x, z), chunk);
       this.chunkCount++;
     }
 
@@ -190,9 +191,6 @@ export default class ChunkLoader {
 
     const { x, z } = ChunkLoader.worldPosToChunk(followPos.x, followPos.z);
 
-    // Set new playerChunk. this makes sure it's always accurate
-    this.playerChunk = this.getChunk(x, z) || this._requestLoadChunk(x, z);
-
     if (
       this.prevFollowPos &&
       followPos.distanceToSquared(this.prevFollowPos) <
@@ -202,100 +200,58 @@ export default class ChunkLoader {
     }
     this.prevFollowPos = followPos.clone();
 
-    const { x: px, z: pz } = this.playerChunk;
+    const chunksToUnload = new Map(this.chunks);
 
-    const chunkKeys = new Set(Object.keys(this.chunks));
+    // request the current chunk first so it loads first
+    const currentChunk = this._requestLoadChunk(x, z);
+    chunksToUnload.delete(currentChunk.loadKey);
 
     for (let i = 0, len = this.renderDist * 2 + 1; i < len; i++) {
       for (let j = 0; j < len; j++) {
         const cx = x + i - this.renderDist,
           cz = z + j - this.renderDist;
-        if (cx === x && cz === z) continue;
+        if (cx === x && cz === z) continue; // we already requested the current chunk
         const chunk = this._requestLoadChunk(cx, cz);
-        chunkKeys.delete(chunk.loadKey);
+        chunksToUnload.delete(chunk.loadKey);
       }
     }
 
     const unloadPadding = 2;
-    for (const key of chunkKeys) {
-      const chunk = this.chunks[key];
-      if (chunk) {
-        if (
-          Math.abs(chunk.x - px) >= this.renderDist + unloadPadding ||
-          Math.abs(chunk.z - pz) >= this.renderDist + unloadPadding
-        ) {
-          this.unloadChunk(key);
-        }
+    for (const chunk of chunksToUnload.values()) {
+      if (
+        // only unload chunks that are outside of the render distance plus some padding
+        Math.abs(chunk.x - x) >= this.renderDist + unloadPadding ||
+        Math.abs(chunk.z - z) >= this.renderDist + unloadPadding
+      ) {
+        this.unloadChunk(chunk.loadKey);
       }
     }
-
-    // const deltaX = x - px,
-    //   deltaZ = z - pz;
-    // const dirX = Math.sign(deltaX),
-    //   dirZ = Math.sign(deltaZ);
-
-    // // Edges
-    // if (deltaX !== 0) {
-    //   for (let i = -this.renderDist; i <= this.renderDist; i++) {
-    //     const newX = px + dirX * this.renderDist + deltaX;
-    //     const newZ = pz + i;
-    //     this._requestLoadChunk(newX, newZ);
-    //   }
-    // }
-    // if (deltaZ !== 0) {
-    //   for (let i = -this.renderDist; i <= this.renderDist; i++) {
-    //     const newX = px + i;
-    //     const newZ = pz + dirZ * this.renderDist + deltaZ;
-    //     this._requestLoadChunk(newX, newZ);
-    //   }
-    // }
-
-    // // Corners
-    // if (deltaX !== 0 && deltaZ !== 0) {
-    //   const newX = px + dirX * this.renderDist + deltaX;
-    //   const newZ = pz + dirZ * this.renderDist + deltaZ;
-    //   this._requestLoadChunk(newX, newZ);
-    // }
-
-    // // Set new playerChunk
-    // this.playerChunk = this.getChunk(x, z);
-    // if (!this.playerChunk) {
-    //   this.playerChunk = this._requestLoadChunk(x, z);
-    //   console.warn('Invalid playerChunk', x, z);
-    // }
-
-    // // Unload chunks
-    // const unloadDist = Math.max(this.renderDist + 2, this.renderDist * 2);
-    // let mx = x - unloadDist,
-    //   mz = z - unloadDist;
-    // for (const [dx, dz] of DIRS) {
-    //   for (let i = 0; i < unloadDist * 2; i++, mx += dx, mz += dz) {
-    //     this.unloadChunk(Chunk.loadKeyFor(mx, mz));
-    //   }
-    // }
 
     return true;
   }
 
-  updatePhysicsChunks(x2, z2) {
-    // const chunkX = x2 * 2;
-    // const chunkZ = z2 * 2;
-  }
+  // updatePhysicsChunks(x2, z2) {
+  //   // const chunkX = x2 * 2;
+  //   // const chunkZ = z2 * 2;
+  // }
 
   unloadChunk(key) {
-    const chunk = this.chunks[key];
+    const chunk = this.chunks.get(key);
     if (chunk) {
       chunk.dispose();
-      delete this.chunks[key];
+      this.chunks.delete(key);
       this.chunkCount--;
-      this.loadedCount--;
+      if (chunk.mesh) this.loadedCount--;
     }
   }
 
   getHeightAt(x, z) {
-    if (!this.playerChunk) return -99999;
+    const coords = ChunkLoader.worldPosToChunk(x, z);
+    const chunk = this.getChunk(coords.x, coords.z);
 
-    return this.playerChunk.getHeightAt(x, z);
+    if (!chunk) return -99999;
+
+    return chunk.getHeightAt(x, z);
   }
 
   async clearMapCache() {
@@ -303,7 +259,7 @@ export default class ChunkLoader {
   }
 
   unloadChunks() {
-    for (const key in this.chunks) this.unloadChunk(key);
+    for (const key of this.chunks.keys()) this.unloadChunk(key);
   }
 
   dispose() {
