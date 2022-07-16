@@ -43,9 +43,3 @@ export const enforceSqrt = (val: number) => {
   if (!isInteger(sqrt)) throw new Error(`${val} is not a square number`);
   return sqrt;
 };
-
-export const distanceSq = (x1: number, y1: number, x2: number, y2: number) => {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  return dx * dx + dy * dy;
-};

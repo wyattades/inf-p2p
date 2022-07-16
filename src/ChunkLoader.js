@@ -3,7 +3,6 @@ import * as THREE from 'three';
 import Chunk from 'src/Chunk';
 import { Subject } from 'src/utils/async';
 import { LODs } from 'src/constants';
-import { distanceSq } from 'src/utils/math';
 
 // const DIRS = [
 //   [1, 0],
@@ -83,40 +82,45 @@ export default class ChunkLoader {
     });
   }
 
-  async loadInitial(playerX, playerZ) {
+  async loadInitial() {
+    if (!this.followPos) throw new Error('No follow positon set');
+
     this.unloadChunks();
 
     this.initialLoad = new Subject();
 
-    const { x: px, z: pz } = ChunkLoader.worldPosToChunk(playerX, playerZ);
-
-    this._requestLoadChunk(px, pz);
-    this.playerChunk = this.getChunk(px, pz); // required for calculating lod
-
-    for (let i = 0, len = this.renderDist * 2 + 1; i < len; i++) {
-      for (let j = 0; j < len; j++) {
-        const x = px + i - this.renderDist,
-          z = pz + j - this.renderDist;
-        if (x === px && z === pz) continue;
-        this._requestLoadChunk(x, z);
-      }
-    }
+    this.updateFromFollower();
 
     await this.initialLoad.toPromise();
   }
 
-  computeLod(x, z) {
-    if (!this.playerChunk) return LODs[0];
+  computeLod(chunkX, chunkZ) {
+    if (!this.followPos) {
+      console.warn(`Missing followPos in computeLod: ${chunkX},${chunkZ}`);
+      return LODs[0];
+    }
 
-    const { x: px, z: pz } = this.playerChunk;
+    const chunkPos = {
+      x: chunkX + 0.5,
+      y: 0,
+      z: chunkZ + 0.5,
+    };
 
-    const dist = Math.sqrt((x - px) ** 2 + (z - pz) ** 2);
+    const normalFollowPos = {
+      x: this.followPos.x / Chunk.SIZE,
+      y: this.followPos.y / Chunk.SIZE,
+      z: this.followPos.z / Chunk.SIZE,
+    };
+
+    const distSq = new THREE.Vector3()
+      .copy(chunkPos)
+      .distanceToSquared(normalFollowPos);
 
     // sanity check
-    if (dist <= 2) return LODs[0];
+    if (distSq <= 4) return LODs[0];
 
     for (let i = LODs.length - 1; i >= 0; i--) {
-      if (dist >= LODs[i] + 2) return LODs[i];
+      if (distSq >= LODs[i] * LODs[i] + 4) return LODs[i];
     }
 
     return LODs[0];
@@ -158,27 +162,39 @@ export default class ChunkLoader {
     this.loadedCount++;
 
     if (this.loadedCount === this.initialChunkAmount)
-      this.initialLoad.complete();
+      this.initialLoad?.complete();
   }
 
-  prevPos = null;
-  updateChunk(vx, vz) {
-    const { x, z } = ChunkLoader.worldPosToChunk(vx, vz);
+  followPos = null;
+  setFollower(pos) {
+    this.followPos = pos;
+    return this;
+  }
 
-    // Set new playerChunk
-    this.playerChunk = this.getChunk(x, z);
-    if (!this.playerChunk) {
-      this.playerChunk = this._requestLoadChunk(x, z);
-      console.warn('Invalid playerChunk', x, z);
-    }
+  prevFollowPos = null;
+
+  followerUpdateDistSq = (Chunk.SIZE / 2) ** 2;
+
+  /**
+   * @param {THREE.Vector3} followPos
+   */
+  updateFromFollower() {
+    const followPos = this.followPos;
+    if (!followPos) return false;
+
+    const { x, z } = ChunkLoader.worldPosToChunk(followPos.x, followPos.z);
+
+    // Set new playerChunk. this makes sure it's always accurate
+    this.playerChunk = this.getChunk(x, z) || this._requestLoadChunk(x, z);
 
     if (
-      this.prevPos &&
-      distanceSq(vx, vz, this.prevPos.x, this.prevPos.z) < (Chunk.SIZE / 2) ** 2
+      this.prevFollowPos &&
+      followPos.distanceToSquared(this.prevFollowPos) <
+        this.followerUpdateDistSq
     ) {
       return false;
     }
-    this.prevPos = { x: vx, z: vz };
+    this.prevFollowPos = followPos.clone();
 
     const { x: px, z: pz } = this.playerChunk;
 
@@ -188,7 +204,7 @@ export default class ChunkLoader {
       for (let j = 0; j < len; j++) {
         const cx = x + i - this.renderDist,
           cz = z + j - this.renderDist;
-        // if (cx === x && cz === z) continue;
+        if (cx === x && cz === z) continue;
         const chunk = this._requestLoadChunk(cx, cz);
         chunkKeys.delete(chunk.loadKey);
       }

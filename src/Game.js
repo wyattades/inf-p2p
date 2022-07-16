@@ -283,13 +283,6 @@ export default class Game {
         .set(Math.cos(angle), Math.sin(angle), 0)
         .add(offset);
       this.dirLight.target.position.copy(offset);
-      // .setLength(30);
-
-      // console.log(
-      //   offset.toArray(),
-      //   this.dirLight.position.toArray(),
-      //   this.dirLight.target.position.toArray(),
-      // );
 
       this.dirLight.intensity = Math.sin(angle);
     }
@@ -305,10 +298,13 @@ export default class Game {
   }
 
   async loadTerrain() {
-    const { x, z } = this.player.position;
-    await this.chunkLoader.loadInitial(x, z);
+    this.chunkLoader.setFollower(this.player.position);
+    await this.chunkLoader.loadInitial();
 
-    const heightAt = this.chunkLoader.getHeightAt(x, z);
+    const heightAt = this.chunkLoader.getHeightAt(
+      this.player.position.x,
+      this.player.position.z,
+    );
     this.player.setPos(null, heightAt + 30, null);
 
     this.ui.set('chunkX', this.chunkLoader.playerChunk.x.toString());
@@ -495,6 +491,8 @@ export default class Game {
       followPosition = this.player.position;
     }
 
+    this.chunkLoader.setFollower(followPosition);
+
     if (followPosition) {
       // Skybox follow position
       this.sky.position.set(followPosition.x, 0, followPosition.z);
@@ -508,7 +506,7 @@ export default class Game {
       // }
 
       // update chunks if needed
-      this.chunkLoader.updateChunk(followPosition.x, followPosition.z);
+      this.chunkLoader.updateFromFollower();
 
       // update UI stats
       if (this.tick % 5 === 0) {
