@@ -1,28 +1,31 @@
-import { openDB } from 'idb';
+import { IDBPDatabase, openDB } from 'idb';
 
 export default class MapCache {
-  constructor(name, version = 4) {
-    this.name = name;
-    this.version = version;
+  storeName: string;
+  disabled?: boolean;
+
+  db: IDBPDatabase;
+
+  _createDbPromise?: Promise<IDBPDatabase>;
+
+  constructor(name: string, private readonly version = 5) {
     this.storeName = `chunks-${name}`;
     this.disabled = false; // May enable for development
 
-    // use a temporary proxy to allow accessing this.db immediately
-    this.db = new Proxy(
-      {},
-      {
-        get: (_target, key) => {
-          return async (...args) => {
-            this.db = await (this._createDbPromise ||= this.createDb());
+    // HACK: use a temporary proxy to allow accessing this.db immediately
+    this.db = new Proxy({} as IDBPDatabase, {
+      get: (_target, key: 'put' | 'clear' | 'get') => {
+        return async (...args: any[]) => {
+          this.db = await (this._createDbPromise ||= this.createDb());
 
-            return this.db[key](...args);
-          };
-        },
+          // @ts-expect-error unknown
+          return this.db[key](...args);
+        };
       },
-    );
+    });
   }
 
-  createDb() {
+  async createDb() {
     return openDB('mapcache', this.version, {
       upgrade: (db, oldVersion, newVersion) => {
         console.log('Upgrading object store:', oldVersion, '->', newVersion);
@@ -38,7 +41,7 @@ export default class MapCache {
     });
   }
 
-  async saveChunk(x, z, chunkData) {
+  async saveChunk(x: number, z: number, chunkData: any) {
     if (this.disabled) return;
 
     await this.db.put(this.storeName, {
@@ -49,7 +52,7 @@ export default class MapCache {
     });
   }
 
-  async loadChunk(x, z) {
+  async loadChunk(x: number, z: number) {
     if (this.disabled) return null;
 
     const data = await this.db.get(this.storeName, [x, z]);
