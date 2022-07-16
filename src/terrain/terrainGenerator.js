@@ -3,8 +3,6 @@ import SimplexNoise from 'simplex-noise';
 import createBezierEasing from 'bezier-easing';
 import { round } from 'lodash';
 
-import { CHUNK_SEGMENTS } from 'src/constants';
-
 const MAGIC_MAX_HEIGHT_SCALE = 1; // 1.16;
 
 const PASSES = [
@@ -22,19 +20,23 @@ const PASSES = [
   },
 ];
 
+// just some big number
+const offsetScale = 100000;
+
+// credit: Sebastian Lague https://youtu.be/MRNFcywkUSA?list=PLFt_AvWsXl0eBW2EiBtl_sxmDtSgZBxB3&t=517
 const genNoiseMap = ({
   seed,
-  scale,
-  octaves,
-  persistance,
-  lacunarity,
-  postAmplitude = 1.0,
-  postAddition = 0.0,
+  scale = 1.0,
+  octaves = 1,
+  persistance = 1.0, // how much the amplitude of the wave changes between octaves
+  lacunarity = 1.0, // how much the frequency of the wave changes between octaves
   offset = { x: 0.0, y: 0.0 },
-  size = CHUNK_SEGMENTS,
+  size,
   lod = 1,
 }) => {
-  const dataSize = size / lod;
+  const dataSize = ((size / lod) | 0) + 1;
+  // if (!isInteger(dataSize))
+  //   throw new Error(`dataSize ${dataSize} is not an integer`);
 
   if (scale <= 0.0) scale = 0.0001;
 
@@ -48,8 +50,8 @@ const genNoiseMap = ({
 
   const octaveOffsets = [];
   for (let i = 0; i < octaves; i++) {
-    const offsetX = prng.quick() * 200000 - 100000 + offset.x;
-    const offsetY = prng.quick() * 200000 - 100000 - offset.y;
+    const offsetX = prng.quick() * offsetScale * 2 - offsetScale + offset.x;
+    const offsetY = prng.quick() * offsetScale * 2 - offsetScale - offset.y;
     octaveOffsets.push({ x: offsetX, y: offsetY });
 
     maxHeight += amplitude;
@@ -59,8 +61,8 @@ const genNoiseMap = ({
   const halfSize = size / 2.0;
 
   let di = 0;
-  for (let x = 0; x < size; x += lod) {
-    for (let y = 0; y < size; y += lod) {
+  for (let x = 0; x <= size; x += lod) {
+    for (let y = 0; y <= size; y += lod) {
       amplitude = 1.0;
       let frequency = 1.0;
       let noiseHeight = 0.0;
@@ -71,7 +73,7 @@ const genNoiseMap = ({
         const sampleY =
           ((y - halfSize + octaveOffsets[i].y) / scale) * frequency;
 
-        // Returns [-1,1]
+        // in range: [-1,1]
         const perlinValue = simplex.noise2D(sampleX, sampleY);
         noiseHeight += perlinValue * amplitude;
 
@@ -80,13 +82,10 @@ const genNoiseMap = ({
       }
 
       // di = yi * dataSize + xi
-      noiseMap[di] =
-        Math.max(
-          0.0,
-          (noiseHeight + 1.0) / (maxHeight * MAGIC_MAX_HEIGHT_SCALE),
-        ) *
-          postAmplitude +
-        postAddition;
+      noiseMap[di] = Math.max(
+        0.0,
+        (noiseHeight + 1.0) / (maxHeight * MAGIC_MAX_HEIGHT_SCALE),
+      );
 
       di++;
     }
@@ -101,7 +100,7 @@ export const generateNoiseMap = (
   chunkZ,
   lod,
   passIndex,
-  size = CHUNK_SEGMENTS,
+  segments,
 ) => {
   const params = PASSES[passIndex];
 
@@ -109,14 +108,15 @@ export const generateNoiseMap = (
     ...params,
     seed: `${passIndex}${seed}`,
     offset: {
-      x: chunkZ * (size - 1),
-      y: -chunkX * (size - 1),
+      x: chunkZ * segments,
+      y: -chunkX * segments,
     },
-    size,
+    size: segments,
     lod,
   });
 };
 
+// this is the slowest part of the terrain generation
 const heightCurve = createBezierEasing(1, 0, 0.85, 0.85);
 
 const AMPLITUDE = 60.0;

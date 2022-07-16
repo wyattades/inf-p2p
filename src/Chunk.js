@@ -4,6 +4,7 @@ import { CHUNK_SEGMENTS, LODs, SEGMENT_SIZE } from 'src/constants';
 import { Body, RAPIER } from 'src/physics';
 import { ZERO_QUATERNION } from 'src/utils/empty';
 import { deserializeGeometry } from 'src/utils/geometry';
+import { enforceSqrt } from 'src/utils/math';
 
 // or MeshLambertMaterial?
 const groundMaterial = new THREE.MeshPhongMaterial({
@@ -106,12 +107,16 @@ export default class Chunk {
         z: this.z,
       },
     });
+
+    const segments = enforceSqrt(this.heightsArray.length) - 1;
+
     this.body.addCollider(
       RAPIER.ColliderDesc.heightfield(
-        CHUNK_SEGMENTS - 1,
-        CHUNK_SEGMENTS - 1,
+        // `nrows` and `ncols` are the number of segments, not vertices, on each side of the heightfield
+        segments,
+        segments,
         this.heightsArray,
-        { x: Chunk.SIZE, y: 1.0, z: Chunk.SIZE },
+        { x: Chunk.SIZE, y: 1.0, z: Chunk.SIZE }, // scale
       ).setFriction(1.0),
     );
     // this.body.renderWireframe(this.group);
@@ -136,10 +141,10 @@ export default class Chunk {
     this.mesh.matrixAutoUpdate = false; // it's not gonna move
     this.mesh.position.copy(this.position);
 
+    this.mesh.updateMatrix();
+
     this.mesh.castShadow = this.mesh.receiveShadow =
       !!this.game.options.get('shadows');
-
-    this.mesh.updateMatrix();
 
     this.group.add(this.mesh);
 

@@ -17,14 +17,15 @@ console.log('Init terrain worker');
 const mapCache = new MapCache('world1');
 
 const PLANE_GEOMS = LODs.map((lod) => {
-  const size = CHUNK_SEGMENTS / lod;
-  if (!isInteger(size)) throw new Error(`Invalid size: ${size}, lod=${lod}`);
+  const chunkSegments = CHUNK_SEGMENTS / lod;
+  if (!isInteger(chunkSegments))
+    throw new Error(`Invalid chunkSegments: ${chunkSegments}, lod=${lod}`);
 
   const geom = new PlaneGeometry(
     CHUNK_SEGMENTS * SEGMENT_SIZE,
     CHUNK_SEGMENTS * SEGMENT_SIZE,
-    size - 1,
-    size - 1,
+    chunkSegments,
+    chunkSegments,
   );
   geom.rotateX(-Math.PI / 2);
   return geom;
@@ -42,6 +43,33 @@ const rowToColumnMajor = (from, to = new from.constructor(from.length)) => {
   return to;
 };
 
+// function* iterateSquareArrayBorder(len) {
+//   // start at top-left
+//   let x = 0;
+//   let y = 0;
+
+//   // point to the right
+//   let dx = 1;
+//   let dy = 0;
+
+//   // 0, -1
+//   // 1, 0
+//   // 0, 1
+//   // -1, 0
+
+//   for (let side = 0; side < 4; side++) {
+//     for (let i = 1; i < len; i++) {
+//       yield [x * len + y, -dy, -dx];
+//       x += dx;
+//       y += dy;
+//     }
+//     // turn right
+//     const t = dx;
+//     dx = -dy;
+//     dy = t;
+//   }
+// }
+
 const SEED = 'The-0rig1n-oF-lif3';
 
 const generateChunk = (x, z, lod) => {
@@ -49,23 +77,28 @@ const generateChunk = (x, z, lod) => {
 
   // perf.start(`geom.clone`);
 
-  let geom = PLANE_GEOMS[LODs.indexOf(lod)].clone();
+  const planeGeom = PLANE_GEOMS[LODs.indexOf(lod)];
+
+  let geom = planeGeom.clone();
 
   // perf.end(`geom.clone`);
 
-  const size = CHUNK_SEGMENTS / lod;
-
   // perf.start('generateNoiseMap');
 
-  let heightMap = generateNoiseMap(SEED, x, z, lod, 0);
+  let heightMap = generateNoiseMap(SEED, x, z, lod, 0, CHUNK_SEGMENTS);
 
-  const secondary = generateNoiseMap(SEED, x, z, lod, 1);
+  const secondary = generateNoiseMap(SEED, x, z, lod, 1, CHUNK_SEGMENTS);
 
   // perf.next('generateNoiseMap', 'colors');
 
   const colorItemSize = 3;
   const colorAttr = new BufferAttribute(
-    new Uint8Array(size * size * colorItemSize * 6),
+    new Uint8Array(
+      (planeGeom.parameters.widthSegments + 1) *
+        (planeGeom.parameters.heightSegments + 1) *
+        colorItemSize *
+        6,
+    ),
     colorItemSize,
     true,
   );
@@ -83,23 +116,20 @@ const generateChunk = (x, z, lod) => {
   // mutates `heightMap`
   heightMap = generateHeightMap(heightMap, secondary);
 
-  if (lod > 1) {
-    // TODO: don't need to iterate every x,y
-    // TODO: this creates ugly ditches
-    for (let hx = 0; hx < size; hx++) {
-      for (let hy = 0; hy < size; hy++) {
-        // is on the edge
-        if (hx === 0 || hy === 0 || hx === size - 1 || hy === size - 1) {
-          const i = hx + hy * size;
-          heightMap[i] = Math.floor(heightMap[i] * 0.5) / 0.5;
-        }
-      }
-    }
-  }
+  const positionArray = geom.attributes.position.array;
+
+  // if (lod > 1) {
+  //   // TODO: this creates ugly ditches
+  //   for (const [i, dx, dz] of iterateSquareArrayBorder(size)) {
+  //     heightMap[i] *= 0.9;
+
+  //     positionArray[i * 3] += dx * SEGMENT_SIZE * lod;
+  //     positionArray[i * 3 + 2] += dz * SEGMENT_SIZE * lod;
+  //   }
+  // }
 
   // perf.next('heights', 'positions');
 
-  const positionArray = geom.attributes.position.array;
   for (let i = 0, j = 0, len = heightMap.length; i < len; i++, j += 3) {
     // faster than `positionAttr.setY(i, heightMap[i])`
     positionArray[j + 1] = heightMap[i];
