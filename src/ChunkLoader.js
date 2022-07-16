@@ -3,13 +3,7 @@ import * as THREE from 'three';
 import Chunk from 'src/Chunk';
 import { Subject } from 'src/utils/async';
 import { LODs } from 'src/constants';
-
-// const DIRS = [
-//   [1, 0],
-//   [0, 1],
-//   [-1, 0],
-//   [0, -1],
-// ];
+import { DEV } from 'src/env';
 
 export default class ChunkLoader {
   /** @type {Map<string, Chunk>} */
@@ -154,7 +148,8 @@ export default class ChunkLoader {
 
   _receiveLoadChunk(chunkData) {
     const { x, z, lod } = chunkData;
-    console.debug('receiveLoadChunk:', x, z, lod);
+
+    if (DEV) console.debug('receiveLoadChunk:', x, z, lod);
 
     const chunk = this.getChunk(x, z);
 

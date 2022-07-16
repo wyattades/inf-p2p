@@ -1,4 +1,4 @@
-import { memoize } from 'lodash';
+import { memoize } from 'lodash-es';
 import { EventEmitter } from 'events';
 import MainLoop from 'mainloop.js';
 import * as THREE from 'three';

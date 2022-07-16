@@ -1,4 +1,4 @@
-import { mapValues, pick } from 'lodash';
+import { mapValues, pick } from 'lodash-es';
 import { BufferAttribute, BufferGeometry } from 'three';
 
 export const serializeBufferAttr = (

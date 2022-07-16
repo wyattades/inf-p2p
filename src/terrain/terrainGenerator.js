@@ -1,7 +1,7 @@
 import Seedrandom from 'seedrandom';
 import SimplexNoise from 'simplex-noise';
 import createBezierEasing from 'bezier-easing';
-import { round } from 'lodash';
+import { round } from 'lodash-es';
 
 const MAGIC_MAX_HEIGHT_SCALE = 1; // 1.16;
 

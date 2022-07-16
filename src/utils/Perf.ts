@@ -1,4 +1,4 @@
-import { round } from 'lodash';
+import { round } from 'lodash-es';
 
 export default class Perf {
   static default = new Perf();

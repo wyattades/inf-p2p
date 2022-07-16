@@ -1,4 +1,4 @@
-import { flatten } from 'lodash';
+import { flatten } from 'lodash-es';
 import { useEffect, useRef, useState } from 'react';
 import { useUpdate } from 'react-use';
 

@@ -39,7 +39,7 @@ export default class FlyControls {
     );
 
     let speed = delta * 20;
-    if (keystate.sprint) speed *= 2;
+    if (keystate.sprint) speed *= 4;
 
     motion.setLength(speed);
 

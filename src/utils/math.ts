@@ -1,4 +1,4 @@
-import { isInteger } from 'lodash';
+import { isInteger } from 'lodash-es';
 
 export const lerp2 = (A: number, B: number, fraction: number) =>
   Math.round(A + fraction * (B - A));

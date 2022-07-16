@@ -1,4 +1,4 @@
-import { fromPairs, isEmpty } from 'lodash';
+import { fromPairs, isEmpty } from 'lodash-es';
 import { EventEmitter } from 'events';
 
 export const MAX_RENDER_DIST = 10;
