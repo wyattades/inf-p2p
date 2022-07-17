@@ -1,6 +1,7 @@
 # Custom
 dist/
 tmp/
+.DS_Store
 
 # Logs
 logs

@@ -68,14 +68,15 @@ export default class Chunk {
     );
   }
 
+  // FIXME: ray-casting is very slow
   getHeightAt(x: number, z: number) {
     // TODO: not accurate
     if (!this.mesh) return -99998;
 
     groundRayCaster.ray.origin.set(x, 1000, z);
 
-    const inter = groundRayCaster.intersectObject(this.mesh);
-    if (inter?.length) return inter[0].point.y;
+    const [inter] = groundRayCaster.intersectObject(this.mesh, false);
+    if (inter) return inter.point.y;
 
     return -99997;
   }
@@ -122,6 +123,21 @@ export default class Chunk {
     // this.body.renderWireframe(this.group);
   }
 
+  updatePhysicsShape() {
+    if (!this.body || !this.heightsArray) return;
+
+    const segments = enforceSqrt(this.heightsArray.length) - 1;
+
+    const bodyShape = new RAPIER.Heightfield(
+      segments,
+      segments,
+      this.heightsArray,
+      { x: Chunk.SIZE, y: 1.0, z: Chunk.SIZE },
+    );
+
+    this.body.rigidBody.collider(0).setShape(bodyShape);
+  }
+
   setTerrain({ lod, heightsArray, ...serializedGeometry }: LoadChunkResponse) {
     // TODO: there could be a race condition here where lower-res terrain takes priority over higher-res
     if (lod !== this.lod)
@@ -138,6 +154,9 @@ export default class Chunk {
     const geometry = deserializeGeometry(serializedGeometry);
 
     this.mesh = new THREE.Mesh(geometry, groundMaterial.clone());
+    // @ts-expect-error assign it
+    this.mesh.gameObject = this;
+
     this.mesh.matrixAutoUpdate = false; // it's not gonna move
     this.mesh.position.copy(this.position);
 

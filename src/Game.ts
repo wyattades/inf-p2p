@@ -24,9 +24,10 @@ import { GameState } from 'src/GameState';
 import Saver from 'src/Saver';
 import FlyControls from 'src/FlyControls';
 import { Physics, loadPhysicsModule } from 'src/physics';
-import Vehicle from './objects/Vehicle';
-import type Client from './Client'; // TODO
-import Box from './objects/Box';
+import { PlacementTool } from 'src/placementTool';
+import type Vehicle from 'src/objects/Vehicle';
+import type Client from 'src/Client'; // TODO
+// import Box from 'src/objects/Box';
 // import Box from 'src/objects/Box';
 
 const SIMULATION_SPEED = 1000 / 60;
@@ -79,6 +80,8 @@ export default class Game {
   renderer: THREE.WebGLRenderer;
   // @ts-expect-error undef
   effectComposer: EffectComposer;
+  // @ts-expect-error undef
+  placementTool: PlacementTool;
 
   constructor(readonly canvas: HTMLCanvasElement) {}
 
@@ -110,6 +113,8 @@ export default class Game {
     this.controls = new Controls(this);
 
     this.player = new Player(this);
+
+    this.placementTool = new PlacementTool(this);
 
     // this.vehicle = new Vehicle(this);
 
@@ -530,6 +535,8 @@ export default class Game {
       // @ts-expect-error TODO better way to iterate objects
       obj.gameObject?.update(delta, this.tick);
     }
+
+    this.placementTool.update(delta, this.tick);
 
     // Physics
     this.physics.update(delta, this.tick);

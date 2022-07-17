@@ -25,12 +25,16 @@ const DEFAULT_KEYBINDS = {
 type KeyBindName = keyof typeof DEFAULT_KEYBINDS;
 
 export default class Controls {
-  rotation = new THREE.Vector2(0, 0);
-  private canvas: HTMLCanvasElement;
-  private keybinds: Record<number, KeyBindName> = {};
-  keystate: Record<string, boolean> = {};
-  private keyCallbacks: Record<string, () => void> = {};
   private em = new EventManager();
+  private canvas: HTMLCanvasElement;
+  private keyCallbacks: Record<string, () => void> = {};
+  private keybinds: Record<number, KeyBindName> = {};
+
+  keystate: Record<string, boolean> = {};
+  pointerState: Record<number, boolean> = {};
+  rotation = new THREE.Vector2(0, 0);
+
+  bindClick?: (evt: MouseEvent) => void;
 
   constructor(readonly game: Game) {
     this.canvas = game.canvas;
@@ -52,6 +56,7 @@ export default class Controls {
   bindControls() {
     // You can only request pointer lock from a user triggered event
     this.em.on(this.canvas, 'mousedown', this.onMousedown);
+    this.em.on(this.canvas, 'mouseup', this.onMouseup);
 
     // Update rotation from mouse motion
     this.em.on(this.canvas, 'mousemove', this.onMousemove);
@@ -115,10 +120,17 @@ export default class Controls {
     this.pauseFromPlaying();
   };
 
-  onMousedown = () => {
+  onMousedown = (evt: MouseEvent) => {
     if (this.game.state === GameState.PAUSED)
       this.game.setState(GameState.PLAYING);
-    else if (this.game.state === GameState.PLAYING) this.lockPointer();
+    else if (this.game.state === GameState.PLAYING) {
+      this.lockPointer();
+
+      // TODO: use events
+      this.bindClick?.(evt);
+    }
+
+    this.pointerState[evt.button] = true;
   };
 
   onMousemove = (evt: MouseEvent) => {
@@ -141,6 +153,10 @@ export default class Controls {
         this.rotation.x = Math.PI / 2;
       }
     }
+  };
+
+  onMouseup = (evt: MouseEvent) => {
+    this.pointerState[evt.button] = false;
   };
 
   allowKey(evt: KeyboardEvent) {
@@ -188,9 +204,9 @@ export default class Controls {
     this.keystate[bindName] = false;
   }
 
-  pressed(bindName: KeyBindName) {
-    return this.keystate[bindName] === true;
-  }
+  // pressed(bindName: KeyBindName) {
+  //   return this.keystate[bindName] === true;
+  // }
 
   bindPress(bindName: KeyBindName, fn: () => void) {
     if (bindName in DEFAULT_KEYBINDS) {
