@@ -27,10 +27,10 @@ type KeyBindName = keyof typeof DEFAULT_KEYBINDS;
 export default class Controls {
   private em = new EventManager();
   private canvas: HTMLCanvasElement;
-  private keyCallbacks: Record<string, () => void> = {};
+  private keyCallbacks: { [key in KeyBindName]?: () => void } = {};
   private keybinds: Record<number, KeyBindName> = {};
 
-  keystate: Record<string, boolean> = {};
+  keystate: { [key in KeyBindName]?: boolean } = {};
   pointerState: Record<number, boolean> = {};
   rotation = new THREE.Vector2(0, 0);
 
@@ -216,7 +216,7 @@ export default class Controls {
 
   clearPresses() {
     for (const bindName in this.keystate) {
-      this.keystate[bindName] = false;
+      this.keystate[bindName as keyof typeof this.keystate] = false;
     }
   }
 

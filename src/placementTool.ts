@@ -66,7 +66,7 @@ export class PlacementTool {
     this.intersectingBox?.dispose();
   }
 
-  cursorActions(pressingAction: boolean) {
+  cursorActions(pressingAction: 'add' | 'sub' | null) {
     this.ray.setFromCamera({ x: 0, y: 0 }, this.game.camera);
 
     const { x: cx, z: cz } = ChunkLoader.worldPosToChunk(
@@ -101,7 +101,11 @@ export class PlacementTool {
       this.terraformCursor.position.y += cursorHeight * 0.5;
 
       if (pressingAction) {
-        this.terraformChunk(chunk!, inter.point);
+        this.terraformChunk(
+          chunk!,
+          inter.point,
+          pressingAction === 'add' ? 1 : -1,
+        );
       }
     } else if (object.gameObject instanceof Box) {
       this.intersectingBox = object.gameObject;
@@ -115,7 +119,7 @@ export class PlacementTool {
     }
   }
 
-  terraformChunk(chunk: Chunk, position: THREE.Vector3) {
+  terraformChunk(chunk: Chunk, position: THREE.Vector3, dir = 1) {
     const relative = new THREE.Vector3(Chunk.SIZE / 2, 0, Chunk.SIZE / 2)
       .sub(chunk.mesh!.position)
       .add(position)
@@ -127,6 +131,8 @@ export class PlacementTool {
     const size = CHUNK_SEGMENTS + 1;
 
     const physicsHeightArray = chunk.heightsArray!;
+
+    const growthVel = growthSpeed * dir;
 
     for (let dx = -growthRadius; dx <= growthRadius; dx++) {
       for (let dz = -growthRadius; dz <= growthRadius; dz++) {
@@ -143,13 +149,13 @@ export class PlacementTool {
         const mb = dz === growthRadius ? 0 : 1; // bottom
         const mt = dz === -growthRadius ? 0 : 1; // top
 
-        array[i18 + 1] += growthSpeed * (mt * ml); // tl
-        array[i18 + 4] = array[i18 + 10] += growthSpeed * (mb * ml); // bl
-        array[i18 + 13] += growthSpeed * (mb * mr); // br
-        array[i18 + 7] = array[i18 + 16] += growthSpeed * (mt * mr); // tr
+        array[i18 + 1] += growthVel * (mt * ml); // tl
+        array[i18 + 4] = array[i18 + 10] += growthVel * (mb * ml); // bl
+        array[i18 + 13] += growthVel * (mb * mr); // br
+        array[i18 + 7] = array[i18 + 16] += growthVel * (mt * mr); // tr
 
         // physicsHeightArray uses column-major order
-        physicsHeightArray[x * size + z] += ml * mr * mb * mt * growthSpeed;
+        physicsHeightArray[x * size + z] += ml * mr * mb * mt * growthVel;
       }
     }
 
@@ -160,7 +166,10 @@ export class PlacementTool {
 
   update(_delta: number, tick: number) {
     this.cursorActions(
-      this.game.controls.pointerState[0] && tick % updateEveryTick === 0,
+      (this.game.controls.pointerState[0] &&
+        tick % updateEveryTick === 0 &&
+        (this.game.controls.keystate.sprint ? 'sub' : 'add')) ||
+        null,
     );
   }
 }
