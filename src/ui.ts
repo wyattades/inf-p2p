@@ -20,7 +20,7 @@ export default class UI {
 
   set(key: keyof typeof DEBUG_STATS, val: number | string | null) {
     if (key in this.debugStats) {
-      this.debugStats[key] = val?.toString();
+      this.debugStats[key] = val?.toString() || null;
       this.events.emit('update_stats', this.debugStats);
     } else console.info('Invalid option key:', key);
   }
