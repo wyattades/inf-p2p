@@ -5,6 +5,8 @@ import ChunkLoader from 'src/ChunkLoader';
 import Box from 'src/objects/Box';
 import Chunk from 'src/Chunk';
 import { CHUNK_SEGMENTS, SEGMENT_SIZE } from 'src/constants';
+import { BodyUserData, RAPIER } from 'src/physics';
+import { copyVector } from 'src/utils/math';
 
 const cursorSize = 2;
 const cursorHeight = cursorSize / 5;
@@ -17,29 +19,42 @@ const updateEveryTick = 5;
 
 const cursorMaterial = new THREE.MeshPhongMaterial({
   color: 0xffffff,
-  opacity: 0.5,
+  opacity: 0.4,
   transparent: true,
 });
 
 export class PlacementTool {
-  ray = new THREE.Raycaster();
+  ray = new RAPIER.Ray(
+    new RAPIER.Vector3(0, 0, 0),
+    new RAPIER.Vector3(0, 0, 0),
+  );
+  helperRay = new THREE.Raycaster();
+
   terraformCursor: THREE.Mesh;
   buildCursor: THREE.Mesh;
+  pendingBoxCursor: THREE.Mesh;
 
   constructor(readonly game: Game) {
     this.terraformCursor = new THREE.Mesh(
       new THREE.BoxGeometry(cursorSize, cursorHeight, cursorSize),
       cursorMaterial,
     );
-    this.game.scene.add(this.terraformCursor);
     this.terraformCursor.visible = false;
+    this.game.scene.add(this.terraformCursor);
 
     this.buildCursor = new THREE.Mesh(
+      new THREE.SphereGeometry(cursorHeight),
+      cursorMaterial,
+    );
+    this.buildCursor.visible = false;
+    this.game.scene.add(this.buildCursor);
+
+    this.pendingBoxCursor = new THREE.Mesh(
       new THREE.BoxGeometry(boxSize, boxSize, boxSize),
       cursorMaterial,
     );
-    this.game.scene.add(this.buildCursor);
-    this.buildCursor.visible = false;
+    this.pendingBoxCursor.visible = false;
+    this.game.scene.add(this.pendingBoxCursor);
 
     game.controls.bindClick = (evt) => {
       if (evt.button === 0) this.removeBox();
@@ -50,8 +65,8 @@ export class PlacementTool {
   addBox() {
     let pos;
 
-    if (this.buildCursor.visible) {
-      pos = this.buildCursor.position;
+    if (this.pendingBoxCursor.visible) {
+      pos = this.pendingBoxCursor.position;
     } else if (this.terraformCursor.visible) {
       pos = this.terraformCursor.position.clone();
       pos.y += -cursorHeight * 0.5 + boxSize * 0.5;
@@ -67,62 +82,77 @@ export class PlacementTool {
   }
 
   cursorActions(pressingAction: 'add' | 'sub' | null) {
-    this.ray.setFromCamera({ x: 0, y: 0 }, this.game.camera);
+    // use threejs raycaster `setFromCamera` util to set the ray
+    this.helperRay.setFromCamera({ x: 0, y: 0 }, this.game.camera);
+    copyVector(this.helperRay.ray.origin, this.ray.origin);
+    copyVector(this.helperRay.ray.direction, this.ray.dir);
 
     const { x: cx, z: cz } = ChunkLoader.worldPosToChunk(
-      this.ray.ray.origin.x,
-      this.ray.ray.origin.z,
+      this.ray.origin.x,
+      this.ray.origin.z,
     );
 
     const chunk = this.game.chunkLoader.getChunk(cx, cz);
 
-    const [inter] = this.ray.intersectObjects(
-      [...(chunk?.mesh ? [chunk.mesh] : []), ...this.game.objectGroup.children],
-      false,
+    const inter = this.game.physics.world.castRayAndGetNormal(
+      this.ray,
+      this.game.flyControls ? maxCursorDistanceWhileFlying : maxCursorDistance,
+      true,
+      undefined,
+      undefined,
+      undefined,
+      this.game.player.body.rigidBody,
     );
 
     this.intersectingBox = null;
     this.terraformCursor.visible = false;
     this.buildCursor.visible = false;
+    this.pendingBoxCursor.visible = false;
 
     if (!inter) return;
 
-    if (
-      inter.distance >
-      (this.game.flyControls ? maxCursorDistanceWhileFlying : maxCursorDistance)
-    ) {
-      return;
-    }
+    const normal = inter.normal;
+    const interPoint = this.ray.pointAt(inter.toi);
 
-    const object = inter.object as THREE.Mesh & { gameObject?: Chunk | Box };
-    if (object.gameObject instanceof Chunk) {
+    // convoluted way to get the gameObject from the collider
+    const gameObject = (
+      inter.collider.parent()?.userData as BodyUserData | undefined
+    )?.gameObject;
+
+    if (gameObject instanceof Chunk) {
       this.terraformCursor.visible = true;
-      this.terraformCursor.position.copy(inter.point);
+      this.terraformCursor.position.copy(interPoint as THREE.Vector3);
       this.terraformCursor.position.y += cursorHeight * 0.5;
 
       if (pressingAction) {
         this.terraformChunk(
           chunk!,
-          inter.point,
+          interPoint,
           pressingAction === 'add' ? 1 : -1,
         );
       }
-    } else if (object.gameObject instanceof Box) {
-      this.intersectingBox = object.gameObject;
+    } else if (gameObject instanceof Box) {
+      this.intersectingBox = gameObject;
 
       this.buildCursor.visible = true;
-      // this.buildCursor.position.copy(inter.point);
+      this.pendingBoxCursor.visible = true;
 
-      this.buildCursor.position
-        .copy(inter.object.position)
-        .add(inter.face!.normal.clone().multiplyScalar(boxSize));
+      this.buildCursor.position.copy(interPoint as THREE.Vector3);
+
+      this.pendingBoxCursor.position
+        .copy(gameObject.mesh.position)
+        .add(
+          new THREE.Vector3()
+            .copy(normal as THREE.Vector3)
+            .multiplyScalar(boxSize),
+        );
     }
   }
 
-  terraformChunk(chunk: Chunk, position: THREE.Vector3, dir = 1) {
+  terraformChunk(chunk: Chunk, position: Point3, dir = 1) {
     const relative = new THREE.Vector3(Chunk.SIZE / 2, 0, Chunk.SIZE / 2)
       .sub(chunk.mesh!.position)
-      .add(position)
+      .add(position as THREE.Vector3)
       .divideScalar(SEGMENT_SIZE)
       .round();
 
