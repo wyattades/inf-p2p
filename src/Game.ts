@@ -47,41 +47,26 @@ export default class Game {
   events = new EventEmitter();
 
   state: GameState | null = null;
-  // @ts-expect-error undef
-  physics: Physics;
-  // @ts-expect-error undef
-  chunkLoader: ChunkLoader;
-  // @ts-expect-error undef
-  controls: Controls;
-  // @ts-expect-error undef
-  options: Options;
-  // @ts-expect-error undef
-  camera: THREE.PerspectiveCamera;
-  // @ts-expect-error undef
-  ui: UI;
-  // @ts-expect-error undef
-  saver: Saver;
-  // @ts-expect-error undef
-  objectGroup: THREE.Group;
-  // @ts-expect-error undef
-  mainLoop: MainLoop;
+  physics!: Physics;
+  chunkLoader!: ChunkLoader;
+  controls!: Controls;
+  options!: Options;
+  camera!: THREE.PerspectiveCamera;
+  ui!: UI;
+  saver!: Saver;
+  objectGroup!: THREE.Group;
+  mainLoop!: MainLoop;
   client?: Client;
 
-  // @ts-expect-error undef
-  player: Player;
+  player!: Player;
   flyControls: FlyControls | null = null;
   vehicle?: Vehicle | null;
 
-  // @ts-expect-error undef
-  scene: THREE.Scene;
-  // @ts-expect-error undef
-  sky: Sky;
-  // @ts-expect-error undef
-  renderer: THREE.WebGLRenderer;
-  // @ts-expect-error undef
-  effectComposer: EffectComposer;
-  // @ts-expect-error undef
-  placementTool: PlacementTool;
+  scene!: THREE.Scene;
+  sky!: Sky;
+  renderer!: THREE.WebGLRenderer;
+  effectComposer!: EffectComposer;
+  placementTool!: PlacementTool;
 
   constructor(readonly canvas: HTMLCanvasElement) {
     // add window hacks

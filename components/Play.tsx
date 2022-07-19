@@ -39,7 +39,6 @@ export const Play: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       let mounted = true;
-      // @ts-expect-error bad ImportMeta
       import.meta.webpackHot?.accept('src/Game.js', async () => {
         if (!mounted) return;
         console.log('Accepting the updated "src/Game" module');
