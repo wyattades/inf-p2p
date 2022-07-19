@@ -36,8 +36,8 @@ const canReadStorage = memoize(() => !!window.navigator?.storage?.estimate);
 
 declare global {
   interface Window {
-    GAME?: Game;
-    cheat?: any;
+    GAME?: Game | null;
+    CHEAT?: any;
   }
 }
 
@@ -83,7 +83,17 @@ export default class Game {
   // @ts-expect-error undef
   placementTool: PlacementTool;
 
-  constructor(readonly canvas: HTMLCanvasElement) {}
+  constructor(readonly canvas: HTMLCanvasElement) {
+    // add window hacks
+    window.GAME = this;
+    window.CHEAT = {
+      setPos: (x: number, y: number, z: number) => {
+        window.GAME?.player.setPos(x, y, z);
+        window.GAME?.chunkLoader.updateFromFollower();
+      },
+      setTime: (hour: number) => window.GAME?.setTime(hour),
+    };
+  }
 
   async preload() {
     await loadPhysicsModule();
@@ -98,7 +108,7 @@ export default class Game {
       45,
       window.innerWidth / window.innerHeight,
       0.5,
-      (MAX_RENDER_DIST + 1) * Chunk.SIZE,
+      Math.ceil(Math.sqrt(2) * MAX_RENDER_DIST * Chunk.SIZE),
     );
 
     this.createScene();
@@ -135,16 +145,6 @@ export default class Game {
 
     if (this.options.get('debug')) {
       this.scene.add(this.physics.debugMesh());
-
-      // add window hacks
-      window.GAME = this;
-      window.cheat = {
-        setPos: (x: number, y: number, z: number) => {
-          this.player.setPos(x, y, z);
-          this.chunkLoader.updateFromFollower();
-        },
-        setTime: (hour: number) => this.setTime(hour),
-      };
     }
 
     // this.client = new Client(this.player);
@@ -328,7 +328,7 @@ export default class Game {
       const followPosition =
         this.flyControls?.object.position || this.player?.position;
 
-      const offset = followPosition.clone().setY(0);
+      const offset = followPosition.clone();
 
       offset.x += Math.cos(angle) * 500;
 
@@ -640,8 +640,7 @@ export default class Game {
     this.controls?.unbindControls();
     this.physics?.dispose();
 
-    delete window.GAME;
-    delete window.cheat;
+    if (window.GAME === this) window.GAME = null;
 
     // we need to listen to `reinitialized` event
     // this.events.removeAllListeners();

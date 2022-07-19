@@ -8,7 +8,7 @@ import { enforceSqrt } from 'src/utils/math';
 import { DEV } from 'src/env';
 
 import MapCache from './MapCache';
-import { generateHeightMap, generateNoiseMap } from './terrainGenerator';
+import { generateHeightMap, generateNoiseMaps } from './terrainGenerator';
 import { iterateColorMap } from './colorMap';
 
 const workerScope = self as unknown as Worker;
@@ -113,9 +113,7 @@ const generateChunk = (
 
   // perf.start('generateNoiseMap');
 
-  let heightMap = generateNoiseMap(SEED, x, z, lod, 0, CHUNK_SEGMENTS);
-
-  const secondary = generateNoiseMap(SEED, x, z, lod, 1, CHUNK_SEGMENTS);
+  const noiseMaps = generateNoiseMaps(SEED, x, z, lod, CHUNK_SEGMENTS);
 
   // perf.next('generateNoiseMap', 'colors');
 
@@ -132,7 +130,7 @@ const generateChunk = (
   );
   const colorArray = colorAttr.array as Uint8Array;
   let ci = 0;
-  for (const ch of iterateColorMap(heightMap, secondary)) {
+  for (const ch of iterateColorMap(noiseMaps[0], noiseMaps[1], noiseMaps[2])) {
     colorArray[ci] = colorArray[ci + 3] = colorArray[ci + 6] = ch.r;
     colorArray[ci + 1] = colorArray[ci + 4] = colorArray[ci + 7] = ch.g;
     colorArray[ci + 2] = colorArray[ci + 5] = colorArray[ci + 8] = ch.b;
@@ -142,7 +140,7 @@ const generateChunk = (
   // perf.next('colors', 'heights');
 
   // mutates `heightMap`
-  heightMap = generateHeightMap(heightMap, secondary);
+  const heightMap = generateHeightMap(noiseMaps);
 
   const positionArray = geom.attributes.position.array as Float32Array;
 

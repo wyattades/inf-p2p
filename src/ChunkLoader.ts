@@ -103,25 +103,31 @@ export default class ChunkLoader {
     this.initialLoad = null;
   }
 
+  _computeDist = new THREE.Vector3();
   computeLod(chunkX: number, chunkZ: number) {
     if (!this.followPos) {
       console.warn(`Missing followPos in computeLod: ${chunkX},${chunkZ}`);
       return LODs[0];
     }
 
+    // don't use the `y` position of `followPos` on initial load b/c we don't know any chunk's height yet
+    const useY = !this.initialLoad;
+
     const chunkPos = {
       x: chunkX + 0.5,
-      y: 0,
+      y: useY
+        ? (this.getChunk(chunkX, chunkZ)?.approximateHeight() ?? 0) / Chunk.SIZE
+        : 0,
       z: chunkZ + 0.5,
     };
 
     const normalFollowPos = {
       x: this.followPos.x / Chunk.SIZE,
-      y: this.followPos.y / Chunk.SIZE,
+      y: useY ? this.followPos.y / Chunk.SIZE : 0,
       z: this.followPos.z / Chunk.SIZE,
     };
 
-    const distSq = new THREE.Vector3()
+    const distSq = this._computeDist
       .copy(chunkPos as THREE.Vector3)
       .distanceToSquared(normalFollowPos as THREE.Vector3);
 

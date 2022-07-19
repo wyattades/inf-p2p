@@ -1,22 +1,34 @@
 import seedRandom from 'seedrandom';
 import SimplexNoise from 'simplex-noise';
 import createBezierEasing from 'bezier-easing';
-import { round } from 'lodash-es';
+// import { round } from 'lodash-es';
 
 const MAGIC_MAX_HEIGHT_SCALE = 1; // 1.16;
 
 const PASSES = [
   {
+    postAmplitude: 60.0,
     scale: 100.0,
     octaves: 5,
     persistance: 0.7,
     lacunarity: 2.0,
+    // this is the slowest part of the terrain generation
+    easingFn: createBezierEasing(1.0, 0.0, 0.85, 0.85),
   },
   {
+    postAmplitude: 80.0,
     scale: 500.0,
     octaves: 2,
     persistance: 0.7,
     lacunarity: 2.0,
+  },
+  {
+    postAmplitude: 500.0,
+    scale: 2000.0,
+    // octaves: 2,
+    // persistance: 0.7,
+    // lacunarity: 2.0,
+    easingFn: createBezierEasing(1.0, 0.0, 0.44, 0.85),
   },
 ];
 
@@ -105,48 +117,42 @@ const genNoiseMap = ({
   return noiseMap;
 };
 
-export const generateNoiseMap = (
+export const generateNoiseMaps = (
   seed: string,
   chunkX: number,
   chunkZ: number,
   lod: number,
-  passIndex: number,
   segments: number,
 ) => {
-  const params = PASSES[passIndex];
-
-  return genNoiseMap({
-    ...params,
-    seed: `${passIndex}${seed}`,
-    offset: {
-      x: chunkZ * segments,
-      y: -chunkX * segments,
-    },
-    size: segments,
-    lod,
+  return PASSES.map((params, passIndex) => {
+    return genNoiseMap({
+      ...params,
+      seed: `${passIndex}${seed}`,
+      offset: {
+        x: chunkZ * segments,
+        y: -chunkX * segments,
+      },
+      size: segments,
+      lod,
+    });
   });
 };
 
-// this is the slowest part of the terrain generation
-const heightCurve = createBezierEasing(1, 0, 0.85, 0.85);
-
-const AMPLITUDE = 60.0;
-const SECONDARY_AMPLITUDE = 80.0;
-
 const ADDITION = -30.0;
 
-export const generateHeightMap = (
-  noiseMap: Float32Array,
-  secondary: Float32Array,
-) => {
-  for (let i = 0; i < noiseMap.length; i++) {
-    noiseMap[i] = round(
-      heightCurve(noiseMap[i]) * AMPLITUDE +
-        secondary[i] * SECONDARY_AMPLITUDE +
-        ADDITION,
-      8,
-    );
+export const generateHeightMap = (noiseMaps: Float32Array[]) => {
+  const len = noiseMaps[0].length;
+  const heightMap = new Float32Array(len).fill(ADDITION);
+
+  for (let mi = 0; mi < noiseMaps.length; mi++) {
+    const noiseMap = noiseMaps[mi];
+    const { easingFn, postAmplitude } = PASSES[mi];
+
+    for (let i = 0; i < len; i++) {
+      heightMap[i] +=
+        (easingFn ? easingFn(noiseMap[i]) : noiseMap[i]) * postAmplitude;
+    }
   }
 
-  return noiseMap;
+  return heightMap;
 };

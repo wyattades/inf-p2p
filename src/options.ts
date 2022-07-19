@@ -3,7 +3,7 @@ import { EventEmitter } from 'events';
 
 import { jsonStorage } from 'src/Saver';
 
-export const MAX_RENDER_DIST = 10;
+export const MAX_RENDER_DIST = 24;
 
 const OPTIONS_MAP = {
   renderDist: {

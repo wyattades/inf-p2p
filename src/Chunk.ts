@@ -4,7 +4,7 @@ import { CHUNK_SEGMENTS, LODs, SEGMENT_SIZE } from 'src/constants';
 import { Body, RAPIER } from 'src/physics';
 import { ZERO_QUATERNION } from 'src/utils/empty';
 import { deserializeGeometry } from 'src/utils/geometry';
-import { enforceSqrt } from 'src/utils/math';
+import { enforceSqrt, mean } from 'src/utils/math';
 import type Game from 'src/Game';
 import type { LoadChunkResponse } from 'src/terrain/terrain.worker';
 
@@ -56,17 +56,13 @@ export default class Chunk {
     return Chunk.loadKeyFor(this.x, this.z);
   }
 
-  get quaternion() {
-    return ZERO_QUATERNION;
-  }
+  quaternion = ZERO_QUATERNION;
 
-  get position() {
-    return new THREE.Vector3(
-      (this.x + 0.5) * Chunk.SIZE,
-      0,
-      (this.z + 0.5) * Chunk.SIZE,
-    );
-  }
+  position = new THREE.Vector3(
+    (this.x + 0.5) * Chunk.SIZE,
+    0,
+    (this.z + 0.5) * Chunk.SIZE,
+  );
 
   // FIXME: ray-casting is very slow
   getHeightAt(x: number, z: number) {
@@ -79,6 +75,12 @@ export default class Chunk {
     if (inter) return inter.point.y;
 
     return -99997;
+  }
+
+  approximateHeight() {
+    const arr = this.heightsArray;
+    if (!arr) return 0;
+    return mean([arr[0], arr[(arr.length / 2) | 0], arr[arr.length - 1]]);
   }
 
   enablePhysics() {
