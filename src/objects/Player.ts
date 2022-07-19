@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 
 import { Body, RAPIER } from 'src/physics';
-import { clamp } from 'src/utils/math';
 import type Game from 'src/Game';
 
 // TODO seperate keyevents, player, and physics
@@ -21,11 +20,19 @@ const clampXZ = (vec3: Point3, max: number) => {
   return vec3;
 };
 
+const _planeNormal = new THREE.Vector3();
+function projectOnPlane(vector: Point3, planeNormal: Point3) {
+  _planeNormal.copy(planeNormal as THREE.Vector3);
+  const dot = _planeNormal.dot(vector as THREE.Vector3);
+  return _planeNormal.multiplyScalar(-dot).add(vector as THREE.Vector3);
+}
+
 const playerHeight = 6.0;
 const playerWidth = 2.0;
 const jumpSpeed = 40;
 const maxSpeed = 45;
-const moveForce = 6000;
+const moveForce = 4000;
+const nonGroundedMoveForce = moveForce * 0.2;
 const friction = 1.1;
 const restitution = 0.15;
 const floorColliderDist = 1.0;
@@ -107,9 +114,9 @@ export default class Player {
       motion.x += 1;
     }
 
-    const groundHeight = this.game.chunkLoader.getHeightAt(
-      this.position.x,
-      this.position.z,
+    const [groundNormal, groundHeight] = this.game.physics.getSlopeAt(
+      this.position,
+      playerHeight,
     );
 
     const onGround = this.onGround(groundHeight);
@@ -127,35 +134,34 @@ export default class Player {
       this.lastJumpAt = tick;
     }
 
-    // apply rotation to motion
-    motion.applyMatrix4(
-      this._motionRotation
-        .set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-        .makeRotationY(rotAngleY),
-    );
+    const applyingMotion = motion.lengthSq() > 0;
 
-    if (onGround) {
-      const offset = this.position
-        .clone()
-        .add(motion.clone().multiplyScalar(0.1));
-
-      const offsetHeight = this.game.chunkLoader.getHeightAt(
-        offset.x,
-        offset.z,
+    if (applyingMotion) {
+      // apply rotation to motion
+      motion.applyMatrix4(
+        this._motionRotation
+          .set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+          .makeRotationY(rotAngleY),
       );
 
-      const slope = offsetHeight - groundHeight;
+      if (onGround) {
+        const slopeVec = projectOnPlane(motion, groundNormal);
 
-      motion.y = clamp(slope, 0, 0.1) * 3.0;
+        if (slopeVec.y > 0) {
+          slopeVec.y *= 0.5; // reduce upward force a bit
+
+          motion.copy(slopeVec);
+        }
+      }
+
+      motion.setLength(onGround ? moveForce : nonGroundedMoveForce);
     }
-
-    motion.setLength(onGround ? moveForce : moveForce * 0.2);
 
     // debug:
     // console.log(onGround, groundHeight, motion.x, motion.y, motion.z);
 
     this.body.rigidBody.resetForces(true);
-    if (motion.lengthSq() > 0) {
+    if (applyingMotion) {
       this.body.rigidBody.addForce(motion, true);
 
       // this.body.rigidBody.applyImpulse(motion, true);
@@ -201,7 +207,7 @@ export default class Player {
     if (this.position.y < -100) {
       console.warn('Player fell out of the world!');
 
-      this.setPos(null, groundHeight + 10, null);
+      this.setPos(null, Math.max(0, groundHeight) + 10, null);
     }
   }
 

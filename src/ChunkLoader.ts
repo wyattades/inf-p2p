@@ -257,14 +257,23 @@ export default class ChunkLoader {
     }
   }
 
-  getHeightAt(x: number, z: number) {
-    const coords = ChunkLoader.worldPosToChunk(x, z);
-    const chunk = this.getChunk(coords.x, coords.z);
+  // unused:
+  // getHeightAt(x: number, z: number) {
+  //   const coords = ChunkLoader.worldPosToChunk(x, z);
+  //   const chunk = this.getChunk(coords.x, coords.z);
 
-    if (!chunk) return -99999;
+  //   if (!chunk) return -99999;
 
-    return chunk.getHeightAt(x, z);
-  }
+  //   return chunk.getHeightAt(x, z);
+  // }
+  // getSlopeAt(x: number, z: number): [slope: number, height: number] {
+  //   const coords = ChunkLoader.worldPosToChunk(x, z);
+  //   const chunk = this.getChunk(coords.x, coords.z);
+
+  //   if (!chunk) return [0, -99999];
+
+  //   return chunk.getSlopeAt(x, z);
+  // }
 
   async clearMapCache() {
     await this.workerCmd('clearCache', null, true);

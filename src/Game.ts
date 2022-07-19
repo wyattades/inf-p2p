@@ -114,7 +114,7 @@ export default class Game {
     this.createScene();
     this.createRenderer();
 
-    this.physics = new Physics();
+    this.physics = new Physics(this);
 
     // debug.enable(this.scene);
 
@@ -354,7 +354,10 @@ export default class Game {
     this.chunkLoader.setFollower(this.player.position);
     await this.chunkLoader.loadInitial();
 
-    const heightAt = this.chunkLoader.getHeightAt(
+    // initialize physics objects by performing one step
+    this.physics.update(1, 0);
+
+    const heightAt = this.physics.getMaxHeightAt(
       this.player.position.x,
       this.player.position.z,
     );

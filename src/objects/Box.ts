@@ -42,7 +42,11 @@ export default class Box {
       bodyType: RAPIER.RigidBodyType.Fixed,
     });
     this.body.addCollider(
-      RAPIER.ColliderDesc.cuboid(size * 0.5, size * 0.5, size * 0.5),
+      RAPIER.ColliderDesc.cuboid(
+        size * 0.5,
+        size * 0.5,
+        size * 0.5,
+      ).setFriction(1.0),
     );
   }
 

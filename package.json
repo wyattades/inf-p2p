@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "test": "echo 'No tests configured!'; exit",
-    "lint": "eslint . --cache",
+    "lint": "eslint . --cache --cache-location tmp/.eslintcache",
     "typecheck": "tsc",
     "dev": "yarn && next dev",
     "build": "next build",

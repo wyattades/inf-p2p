@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import type * as RapierType from '@dimforge/rapier3d';
 
-import { ZERO_VECTOR3 } from 'src/utils/empty';
+import { ZERO_POINT3, ZERO_VECTOR3 } from 'src/utils/empty';
+import type Game from 'src/Game';
 
-const Vector3 = THREE.Vector3; // it doesn't matter which Vector3 we use
+export { RapierType };
 
 // eslint-disable-next-line import/no-mutable-exports
 export let RAPIER: typeof RapierType;
@@ -86,6 +87,10 @@ export class Body {
     for (let i = 0, l = this.rigidBody.numColliders(); i < l; i++)
       c.push(this.rigidBody.collider(i));
     return c;
+  }
+
+  get firstShape() {
+    return this.rigidBody.collider(0).shape;
   }
 
   resetMovement() {
@@ -173,8 +178,8 @@ export class Physics {
   world: RapierType.World;
   eventQueue?: RapierType.EventQueue;
 
-  constructor() {
-    const gravity = new Vector3(0.0, GRAVITY, 0.0);
+  constructor(readonly game: Game) {
+    const gravity = new RAPIER.Vector3(0.0, GRAVITY, 0.0);
 
     // this.eventQueue = new RAPIER.EventQueue(true);
 
@@ -355,6 +360,62 @@ export class Physics {
     color.needsUpdate = true;
 
     return mesh;
+  }
+
+  groundRayCaster = new RAPIER.Ray(
+    new RAPIER.Vector3(0, 0, 0),
+    new RAPIER.Vector3(0, -1, 0),
+  );
+
+  // by default, raycasts will ignore the player.
+  getSlopeAt(
+    position: Point3,
+    // is the maximum "time-of-impact" that can be reported by the ray-cast.
+    // The notion of "time-of-impact" refer to the fact that a ray can be
+    // seen as a point starting at ray.origin moving at a linear velocity
+    // equal to ray.dir. Therefore, max_toi limits the ray-cast to the segment:
+    // [ray.origin, ray.origin + ray.dir * max_toi]
+    maxToi: number,
+    // filterGroups: player, objects, terrain // TODO
+  ): [normal: Point3, height: number] {
+    // TODO: not accurate
+    // if (!this.body) return [0, -99998];
+
+    // this.octree?.capsuleIntersect(this.game.player.object);
+
+    this.groundRayCaster.origin.x = position.x;
+    this.groundRayCaster.origin.y = position.y;
+    this.groundRayCaster.origin.z = position.z;
+
+    const playerBody = this.game.player.body.rigidBody;
+
+    // docs: https://rapier.rs/docs/user_guides/javascript/scene_queries
+    const inter = this.world.castRayAndGetNormal(
+      this.groundRayCaster,
+      maxToi,
+      false,
+      RAPIER.QueryFilterFlags.EXCLUDE_DYNAMIC, // why doesn't this exclude the player?
+      undefined,
+      undefined,
+      playerBody,
+    );
+
+    if (!inter) return [ZERO_POINT3, -99997];
+
+    if (inter.collider.parent()?.handle === playerBody.handle) {
+      console.warn('player hit the raycaster!');
+      return [ZERO_POINT3, -99996];
+    }
+
+    const interPoint = this.groundRayCaster.pointAt(inter.toi);
+
+    return [inter.normal, interPoint.y];
+  }
+
+  getMaxHeightAt(x: number, z: number): number {
+    const maxToi = 3000; // assumes the max terrain height
+
+    return this.getSlopeAt({ x, y: maxToi / 2, z }, maxToi)[1];
   }
 
   dispose() {

@@ -27,10 +27,7 @@ const groundMaterial = new THREE.MeshPhongMaterial({
 //   },
 // });
 
-const groundRayCaster = new THREE.Raycaster(
-  new THREE.Vector3(0, 1000, 0),
-  new THREE.Vector3(0, -1, 0),
-);
+// let groundRayCaster: RapierType.Ray | undefined;
 
 export default class Chunk {
   static SIZE = CHUNK_SEGMENTS * SEGMENT_SIZE;
@@ -64,18 +61,27 @@ export default class Chunk {
     (this.z + 0.5) * Chunk.SIZE,
   );
 
-  // FIXME: ray-casting is very slow
-  getHeightAt(x: number, z: number) {
-    // TODO: not accurate
-    if (!this.mesh) return -99998;
+  // get groundRayCaster() {
+  //   return (groundRayCaster ||= new RAPIER.Ray(
+  //     new RAPIER.Vector3(0, -1000, 0),
+  //     new RAPIER.Vector3(0, 1, 0),
+  //   ));
+  // }
 
-    groundRayCaster.ray.origin.set(x, 1000, z);
+  // unused:
+  // getSlopeAt(x: number, z: number): [slope: number, height: number] {
 
-    const [inter] = groundRayCaster.intersectObject(this.mesh, false);
-    if (inter) return inter.point.y;
+  // import { Octree } from 'three/examples/jsm/math/Octree';
+  // import { OctreeHelper } from 'three/examples/jsm/helpers/OctreeHelper';
 
-    return -99997;
-  }
+  // const hit = this.octree?.capsuleIntersect(this.game.player.object);
+
+  //   if (!hit) return [0, -99997];
+
+  //   const hitPoint = this.groundRayCaster.pointAt(hit.toi);
+
+  //   return [slope, hitPoint.y];
+  // }
 
   approximateHeight() {
     const arr = this.heightsArray;
@@ -169,22 +175,38 @@ export default class Chunk {
 
     this.group.add(this.mesh);
 
-    if (this.game.options!.get('debug')) {
-      this.debugChunkBoundsMesh = new THREE.LineSegments(
-        new THREE.EdgesGeometry(
-          new THREE.BoxGeometry(Chunk.SIZE, 512, Chunk.SIZE),
-        ),
-        new THREE.LineBasicMaterial({
-          color: new THREE.Color()
-            .setHSL(0, 0, 1 - LODs.indexOf(this.lod) / LODs.length)
-            .getHex(),
-          linewidth: 1,
-        }),
-      );
-      this.mesh.matrixAutoUpdate = false;
-      this.debugChunkBoundsMesh.position.copy(this.mesh.position);
-      this.group.add(this.debugChunkBoundsMesh);
-    }
+    // if (!this.octree) {
+    //   this.game.chunkLoader.worldOctree = new Octree();
+    //   console.log('octree:', this.x, this.z);
+    //   this.octree.fromGraphNode(this.mesh);
+    // }
+
+    this.debugBoundary();
+  }
+
+  debugBoundary() {
+    if (!this.game.options.get('debug') || !this.mesh || this.lod == null)
+      return;
+
+    // if (this.game.chunkLoader.worldOctree)
+    //   this.game.chunkLoader.octreeHelper ||= new OctreeHelper(
+    //     this.game.chunkLoader.worldOctree,
+    //   );
+
+    this.debugChunkBoundsMesh = new THREE.LineSegments(
+      new THREE.EdgesGeometry(
+        new THREE.BoxGeometry(Chunk.SIZE, 512, Chunk.SIZE),
+      ),
+      new THREE.LineBasicMaterial({
+        color: new THREE.Color()
+          .setHSL(0, 0, 1 - LODs.indexOf(this.lod) / LODs.length)
+          .getHex(),
+        linewidth: 1,
+      }),
+    );
+    this.mesh.matrixAutoUpdate = false;
+    this.debugChunkBoundsMesh.position.copy(this.mesh.position);
+    this.group.add(this.debugChunkBoundsMesh);
   }
 
   disposeMesh() {
