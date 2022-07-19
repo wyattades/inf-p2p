@@ -5,6 +5,7 @@ import { Body, RAPIER } from 'src/physics';
 import { ZERO_QUATERNION } from 'src/utils/empty';
 import { deserializeGeometry } from 'src/utils/geometry';
 import { enforceSqrt, mean } from 'src/utils/math';
+import { GameObject, physicsMixin } from 'src/objects/base';
 import type Game from 'src/Game';
 import type { LoadChunkResponse } from 'src/terrain/terrain.worker';
 
@@ -29,21 +30,30 @@ const groundMaterial = new THREE.MeshPhongMaterial({
 
 // let groundRayCaster: RapierType.Ray | undefined;
 
-export default class Chunk {
+export default class Chunk extends physicsMixin(GameObject) {
   static SIZE = CHUNK_SEGMENTS * SEGMENT_SIZE;
 
   lod: number | null = null;
   mesh: THREE.Mesh | null = null;
-  body: Body | null = null;
   heightsArray: Float32Array | null = null;
   debugChunkBoundsMesh: THREE.LineSegments | null = null;
 
   constructor(
-    readonly game: Game,
+    game: Game,
     readonly group: THREE.Group,
     readonly x: number,
     readonly z: number,
-  ) {}
+  ) {
+    super(game);
+
+    this.quaternion = ZERO_QUATERNION;
+
+    this.position = new THREE.Vector3(
+      (x + 0.5) * Chunk.SIZE,
+      0,
+      (z + 0.5) * Chunk.SIZE,
+    );
+  }
 
   static loadKeyFor(x: number, z: number) {
     return `${x},${z}`;
@@ -52,14 +62,6 @@ export default class Chunk {
   get loadKey() {
     return Chunk.loadKeyFor(this.x, this.z);
   }
-
-  quaternion = ZERO_QUATERNION;
-
-  position = new THREE.Vector3(
-    (this.x + 0.5) * Chunk.SIZE,
-    0,
-    (this.z + 0.5) * Chunk.SIZE,
-  );
 
   // get groundRayCaster() {
   //   return (groundRayCaster ||= new RAPIER.Ray(
@@ -225,13 +227,10 @@ export default class Chunk {
   }
 
   dispose() {
+    super.dispose();
+
     this.heightsArray = null;
 
     this.disposeMesh();
-
-    if (this.body) {
-      this.body.dispose();
-      this.body = null;
-    }
   }
 }

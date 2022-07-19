@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { Body, RAPIER } from 'src/physics';
 import type Game from 'src/Game';
 
+import { GameObject, physicsMixin } from './base';
+
 // TODO seperate keyevents, player, and physics
 
 const _clamp = new THREE.Vector2(0, 0);
@@ -37,14 +39,21 @@ const friction = 1.1;
 const restitution = 0.15;
 const floorColliderDist = 1.0;
 
-export default class Player {
+export default class Player extends physicsMixin(GameObject) {
   object = new THREE.Object3D();
   position = this.object.position;
+  quaternion = this.object.quaternion;
   rotation = this.object.rotation;
-  body: Body;
 
-  constructor(readonly game: Game) {
-    this.body = new Body(this.object, this.game.physics, {
+  body!: Body;
+
+  constructor(game: Game) {
+    super(game);
+    this.enablePhysics();
+  }
+
+  enablePhysics() {
+    this.body = new Body(this, this.game.physics, {
       lockRotation: true,
       type: 'player',
     });
@@ -56,16 +65,6 @@ export default class Player {
         .setFriction(friction)
         .setRestitution(restitution), // bounciness
     );
-
-    // sensor and heightmap are slow together: https://github.com/dimforge/rapier/issues/332
-    // this.floorColliderHandle = this.body.addCollider(
-    //   RAPIER.ColliderDesc.ball(floorColliderDist)
-    //     .setSensor(true)
-    //     .setTranslation(0, -playerHeight / 2, 0),
-    // ).handle;
-
-    // this.floorSensor.registerContactListener();
-    // this.body.registerContactListener();
   }
 
   setPos(x: number | null, y: number | null, z: number | null) {
@@ -73,7 +72,7 @@ export default class Player {
     pos.set(x ?? pos.x, y ?? pos.y, z ?? pos.z);
 
     this.body.resetMovement();
-    this.body.copyFromObj(this.object, true);
+    this.body.copyFromObj(this, true);
   }
 
   get velocity() {
@@ -179,29 +178,7 @@ export default class Player {
     this.object.rotateY(rotAngleY);
     this.object.rotateX(rotAngleX);
 
-    this.body.copyToObj(this.object, true);
-
-    // // hit ground
-    // const groundHeight = this.chunkLoader.getHeightAt(
-    //   this.position.x,
-    //   this.position.z,
-    // );
-    // const groundDist = this.position.y - playerHeight - groundHeight;
-    // this.onGround = groundDist <= 0;
-    // if (this.onGround) this.velocity.y = 0;
-    // if (groundDist < 0) this.position.y = groundHeight + playerHeight;
-
-    // // drag
-    // const velY = this.velocity.y;
-    // this.velocity.y = 0;
-    // if (groundDist < 0.5) {
-    //   this.velocity.multiplyScalar(drag);
-    // }
-    // this.velocity.clampLength(-maxSpeed, maxSpeed);
-    // this.velocity.y = velY;
-
-    // // gravity
-    // this.velocity.y -= gravity;
+    this.body.copyToObj(this, true);
 
     // TODO: figure out the actual minimum height
     if (this.position.y < -100) {
@@ -209,10 +186,5 @@ export default class Player {
 
       this.setPos(null, Math.max(0, groundHeight) + 10, null);
     }
-  }
-
-  dispose() {
-    // physics.unregisterContactListener(this.body.rigidBody.handle)
-    this.body.dispose();
   }
 }

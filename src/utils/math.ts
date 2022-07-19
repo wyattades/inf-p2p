@@ -46,3 +46,10 @@ export const enforceSqrt = (val: number) => {
   if (!isInteger(sqrt)) throw new Error(`${val} is not a square number`);
   return sqrt;
 };
+
+export const copyVector = (from: Point3, to: Point3) => {
+  to.x = from.x;
+  to.y = from.y;
+  to.z = from.z;
+  return to;
+};

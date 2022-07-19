@@ -3,6 +3,7 @@ import type * as RapierType from '@dimforge/rapier3d';
 
 import { ZERO_POINT3, ZERO_VECTOR3 } from 'src/utils/empty';
 import type Game from 'src/Game';
+import type { GameObject } from 'src/objects/base';
 
 export { RapierType };
 
@@ -15,17 +16,19 @@ export const loadPhysicsModule = async () => {
 
 export const GRAVITY = -9.82 * 8;
 
-type GameObject = THREE.Object3D;
+export type BodyUserData<
+  Extra extends Record<string, any> = Record<string, never>,
+> = Extra & {
+  gameObject: GameObject;
+  type: string;
+};
 
 export class Body {
   world: RapierType.World;
   rigidBody: RapierType.RigidBody;
 
   constructor(
-    obj: {
-      position: Point3;
-      quaternion: Quaternion;
-    },
+    obj: GameObject,
     physics: Physics,
     {
       bodyType = RAPIER.RigidBodyType.Dynamic,
@@ -67,8 +70,9 @@ export class Body {
 
     this.rigidBody.userData = {
       ...userData,
+      gameObject: obj,
       type,
-    };
+    } as BodyUserData;
   }
 
   addCollider(colliderDesc: RapierType.ColliderDesc) {
@@ -101,14 +105,11 @@ export class Body {
   copyToObj(obj: GameObject, excludeRotation = false) {
     obj.position.copy(this.rigidBody.translation() as THREE.Vector3);
     if (!excludeRotation)
-      obj.setRotationFromQuaternion(
-        this.rigidBody.rotation() as THREE.Quaternion,
-      );
+      obj.quaternion.copy(this.rigidBody.rotation() as THREE.Quaternion);
   }
   copyFromObj(obj: GameObject, excludeRotation = false) {
-    this.rigidBody.setTranslation(obj.position as Point3, true);
-    if (!excludeRotation)
-      this.rigidBody.setRotation(obj.quaternion as Quaternion, false);
+    this.rigidBody.setTranslation(obj.position, true);
+    if (!excludeRotation) this.rigidBody.setRotation(obj.quaternion, false);
   }
 
   // registerContactListener() {
@@ -147,6 +148,8 @@ export class Body {
 
   dispose() {
     // this.unregisterContactListener();
+    this.rigidBody.userData = null;
+
     // removes the RigidBody and Colliders
     this.world.removeRigidBody(this.rigidBody);
     // @ts-expect-error can't assign null
@@ -301,7 +304,7 @@ export class Physics {
 
     this.world.bodies.forEach((body) => {
       if (body.isDynamic()) {
-        if ((body.userData as { type: string }).type === 'player') return;
+        if ((body.userData as BodyUserData).type === 'player') return;
 
         const position = body.translation();
 
