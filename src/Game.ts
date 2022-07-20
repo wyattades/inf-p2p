@@ -560,7 +560,11 @@ export default class Game {
 
     if (followPosition) {
       // Skybox follow position
-      this.sky.position.set(followPosition.x, 0, followPosition.z);
+      this.sky.position.set(
+        followPosition.x,
+        this.sky.position.y,
+        followPosition.z,
+      );
 
       // if (this.dirLight) {
       //   const shadowCamera = this.dirLight;
