@@ -1,4 +1,4 @@
-import { memoize } from 'lodash-es';
+import { memoize, pull } from 'lodash-es';
 import { EventEmitter } from 'events';
 import MainLoop from 'mainloop.js';
 import * as THREE from 'three';
@@ -6,9 +6,11 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
 // import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass';
 // import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass';
-// import { AfterimagePass } from 'three/examples/jsm/postprocessing/OutlinePass';
+import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass';
 // import { OutlineEffect } from 'three/examples/jsm/effects/OutlineEffect';
 // import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass';
+// import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass';
+// import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader';
 
 import ChunkLoader from 'src/ChunkLoader';
 import Chunk from 'src/Chunk';
@@ -172,6 +174,7 @@ export default class Game {
     this.scene.add(this.sky);
   }
 
+  outlinePass?: OutlinePass;
   createRenderer() {
     this.renderer?.dispose();
     this.effectComposer?.reset();
@@ -208,10 +211,39 @@ export default class Game {
 
     // this.effectComposer.addPass(new SSAOPass(this.scene, this.camera));
 
-    // this.effectComposer.addPass(new OutlineEffect(this.renderer));
+    // const outlinePass = (this.outlinePass = new OutlinePass(
+    //   this.renderer.getSize(new THREE.Vector2()), // TODO: dynamically update on screen resize?
+    //   this.scene,
+    //   this.camera,
+    // ));
+    // outlinePass.visibleEdgeColor.set('#4E3434');
+    // outlinePass.hiddenEdgeColor.set('#000000');
+    // outlinePass.edgeStrength = 3.0;
+    // outlinePass.edgeThickness = 3.0;
+    // outlinePass.edgeGlow = 0.0;
+    // outlinePass.pulsePeriod = 0.0;
+    // outlinePass.usePatternTexture = false;
+    // this.effectComposer.addPass(outlinePass);
+
+    // const effectFXAA = new ShaderPass(FXAAShader);
+    // effectFXAA.uniforms.resolution.value.set(
+    //   1 / window.innerWidth,
+    //   1 / window.innerHeight,
+    // );
+    // this.effectComposer.addPass(effectFXAA);
 
     // const afterimagePass = new AfterimagePass(0.95);
     // this.effectComposer.addPass(afterimagePass);
+  }
+
+  updateOutlineMesh(mesh: THREE.Mesh, add = true) {
+    if (!this.outlinePass) return;
+    if (add) {
+      if (!this.outlinePass.selectedObjects.includes(mesh))
+        this.outlinePass.selectedObjects.push(mesh);
+    } else {
+      pull(this.outlinePass.selectedObjects, mesh);
+    }
   }
 
   render = () => {

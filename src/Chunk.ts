@@ -177,6 +177,8 @@ export default class Chunk extends physicsMixin(GameObject) {
 
     this.group.add(this.mesh);
 
+    this.game.updateOutlineMesh(this.mesh);
+
     // if (!this.octree) {
     //   this.game.chunkLoader.worldOctree = new Octree();
     //   console.log('octree:', this.x, this.z);
@@ -213,6 +215,7 @@ export default class Chunk extends physicsMixin(GameObject) {
 
   disposeMesh() {
     if (this.mesh) {
+      this.game.updateOutlineMesh(this.mesh, false);
       this.group.remove(this.mesh);
       this.mesh.geometry.dispose();
       this.mesh = null;

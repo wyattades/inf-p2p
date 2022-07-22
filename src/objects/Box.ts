@@ -43,6 +43,8 @@ export default class Box extends physicsMixin(GameObject) {
     // @ts-expect-error TODO better way to iterate objects
     this.mesh.gameObject = this;
 
+    // this.game.updateOutlineMesh(this.mesh, true);
+
     this.enablePhysics();
   }
 
@@ -65,6 +67,7 @@ export default class Box extends physicsMixin(GameObject) {
   dispose() {
     super.dispose();
 
+    this.game.updateOutlineMesh(this.mesh, false);
     this.mesh.removeFromParent();
     // @ts-expect-error cannot assign null
     this.mesh = null;
