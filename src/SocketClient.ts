@@ -43,17 +43,19 @@ const decodeUpdate = (dataString: string): UpdatePayload | null => {
   return update;
 };
 
-export default class Client {
+export class SocketClient {
   events = new EventEmitter();
-  updateSpeed = 32;
+  millisPerSend = 32;
   initiator: boolean | null = null;
   peer: SimplePeer | null = null;
   text = '';
 
   constructor(private readonly player: Player) {}
 
-  init() {
+  async init() {
     this.initiator = null;
+
+    this.createPeer();
   }
 
   onSubmit = (val: string) => {
@@ -115,9 +117,43 @@ export default class Client {
   }
 
   createPeer() {
+    const username = 'inf-p2p',
+      credential = 'inf-p2p';
+
+    this.initiator = window.location.hash.replace('#', '') !== 'receive';
+
+    console.log('P2P init:', this.initiator);
+
     this.peer = new Peer({
-      initiator: this.initiator ?? undefined,
+      initiator: this.initiator,
+      config: {
+        iceServers: [
+          {
+            urls: 'stun:openrelay.metered.ca:80',
+          },
+          {
+            urls: 'turn:openrelay.metered.ca:80',
+            username,
+            credential,
+          },
+          {
+            urls: 'turn:openrelay.metered.ca:443',
+            username,
+            credential,
+          },
+          {
+            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+            username,
+            credential,
+          },
+        ],
+      },
     });
+
+    // this.peer.signal({
+    //   type: 'offer',
+    //   sdp
+    // })
 
     this.peer.on('error', (err) => {
       console.error('P2P Error', err);
@@ -125,18 +161,27 @@ export default class Client {
     });
 
     this.peer.on('signal', (data) => {
-      if (data.type === 'offer' || data.type === 'answer') {
-        this.setText(window.btoa(data.sdp || ''));
+      console.log('P2P signal', data);
+      if (data.type === 'offer') {
+        //
+      } else if (data.type === 'candidate') {
+        //
+      } else if (data.type === 'answer') {
+        //
       }
+      // if (data.type === 'offer' || data.type === 'answer') {
+      //   this.setText(window.btoa(data.sdp || ''));
+      // }
     });
 
     this.peer.on('connect', () => {
-      this.setText('');
-      console.log('CONNECT', this.initiator);
+      // this.setText('');
+      console.log('P2P connect', this.initiator);
       this.events.emit('connect');
+
       this.sendInterval = window.setInterval(() => {
         this.peer!.send(encodeUpdate(this.player));
-      }, this.updateSpeed);
+      }, this.millisPerSend);
     });
 
     this.peer.on('data', (data) => {
