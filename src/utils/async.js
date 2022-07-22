@@ -31,12 +31,15 @@ export class Subject {
       if (this.pushNext) for (const val of this._next) next(val);
       if (this._done === PENDING) this._ee.on('next', next);
     }
-    if (this._finish(error, complete));
+    const finish = () => this._finish(error, complete);
+    if (finish());
     else if (error || complete) {
-      this._ee.once('done', () => {
-        this._finish(error, complete);
-      });
+      this._ee.once('done', finish);
     }
+    return () => {
+      this._ee.off('next', next);
+      this._ee.off('done', finish);
+    };
   }
 
   next(val) {

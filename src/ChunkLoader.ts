@@ -90,7 +90,7 @@ export default class ChunkLoader {
 
   initialLoad: Subject | null = null;
   async loadInitial() {
-    if (!this.followPos) throw new Error('No follow positon set');
+    if (!this.followPos) throw new Error('No follow position set');
 
     this.unloadChunks();
 
@@ -176,12 +176,12 @@ export default class ChunkLoader {
     // Chunks have the possibility of unloading before this callback
     if (!chunk) return console.warn('Received uninitialized chunk', chunkData);
 
+    if (!chunk.mesh) this.loadedCount++;
+
     chunk.setTerrain(chunkData);
 
     // TODO: only need to enable physics for 4 chunks max at a time
     chunk.enablePhysics();
-
-    this.loadedCount++;
 
     if (this.loadedCount === this.initialChunkAmount)
       this.initialLoad?.complete();

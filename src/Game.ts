@@ -298,7 +298,7 @@ export default class Game {
       this.scene.add(new THREE.CameraHelper(this.dirLight.shadow.camera));
 
     this.scene.add(this.dirLight);
-    this.scene.add(this.dirLight.target);
+    this.scene.add(this.dirLight.target); // b/c we move this light around
   }
 
   time = 0;

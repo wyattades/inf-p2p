@@ -163,7 +163,7 @@ export default class Chunk extends physicsMixin(GameObject) {
 
     const geometry = deserializeGeometry(serializedGeometry);
 
-    this.mesh = new THREE.Mesh(geometry, groundMaterial.clone());
+    this.mesh = new THREE.Mesh(geometry, groundMaterial);
     // @ts-expect-error assign it
     this.mesh.gameObject = this;
 
