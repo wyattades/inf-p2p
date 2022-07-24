@@ -212,11 +212,12 @@ export class SocketClient {
   // }
 
   simplePeerOptions(): SimplePeerOptions {
-    const username = 'inf-p2p',
-      credential = 'inf-p2p';
+    const username = 'openrelayproject',
+      credential = 'openrelayproject';
 
     return {
       config: {
+        // https://www.metered.ca/tools/openrelay
         iceServers: [
           {
             urls: 'stun:openrelay.metered.ca:80',
