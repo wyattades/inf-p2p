@@ -31,8 +31,8 @@ export const isNumber = (v: any): v is number =>
 
 export const toNum = (input: any): number | null => {
   let num: number | undefined;
-  if (typeof num === 'string') num = Number(input);
-  else if (typeof num === 'number') num = input;
+  if (typeof input === 'string') num = Number(input);
+  else if (typeof input === 'number') num = input;
   if (num == null || Number.isNaN(num)) return null;
   else return num;
 };
