@@ -29,7 +29,7 @@ function projectOnPlane(vector: Point3, planeNormal: Point3) {
   return _planeNormal.multiplyScalar(-dot).add(vector as THREE.Vector3);
 }
 
-const playerHeight = 6.0;
+export const playerHeight = 6.0;
 const playerWidth = 2.0;
 const jumpSpeed = 40;
 const maxSpeed = 45;

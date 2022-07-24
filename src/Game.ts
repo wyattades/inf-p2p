@@ -20,7 +20,6 @@ import Sky from 'src/objects/Sky';
 // import Vehicle from 'src/objects/Vehicle';
 import { GameState } from 'src/GameState';
 import { SocketClient } from 'src/SocketClient';
-import { loadModel } from 'src/utils/models';
 import Saver from 'src/Saver';
 import FlyControls from 'src/FlyControls';
 import { Physics, loadPhysicsModule } from 'src/physics';
@@ -52,6 +51,7 @@ export default class Game {
   ui!: UI;
   saver!: Saver;
   objectGroup!: THREE.Group;
+  otherPlayerGroup!: THREE.Group;
   mainLoop!: MainLoop;
   socketClient!: SocketClient;
 
@@ -129,7 +129,10 @@ export default class Game {
       this.scene.add(this.physics.debugMesh());
     }
 
-    this.socketClient = new SocketClient(this.player);
+    this.otherPlayerGroup = new THREE.Group();
+    this.scene.add(this.otherPlayerGroup);
+
+    this.socketClient = new SocketClient(this.otherPlayerGroup, this.player);
 
     this.tick = 0;
     this.setTime(8);
@@ -626,6 +629,7 @@ export default class Game {
     this.saver?.dispose();
     this.scene?.clear();
     this.objectGroup?.clear();
+    this.otherPlayerGroup?.clear();
     this.socketClient?.dispose();
     this.renderer?.dispose();
     this.controls?.unbindControls();
