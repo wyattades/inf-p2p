@@ -24,6 +24,7 @@ import Saver from 'src/Saver';
 import FlyControls from 'src/FlyControls';
 import { Physics, loadPhysicsModule } from 'src/physics';
 import { PlacementTool } from 'src/placementTool';
+import { MoveBot } from 'src/MoveBot';
 import type Vehicle from 'src/objects/Vehicle';
 
 const SIMULATION_SPEED = 1000 / 60;
@@ -54,6 +55,7 @@ export default class Game {
   otherPlayerGroup!: THREE.Group;
   mainLoop!: MainLoop;
   socketClient!: SocketClient;
+  moveBot!: MoveBot;
 
   player!: Player;
   flyControls: FlyControls | null = null;
@@ -65,7 +67,13 @@ export default class Game {
   effectComposer!: EffectComposer;
   placementTool!: PlacementTool;
 
-  constructor(readonly canvas: HTMLCanvasElement) {
+  constructor(readonly canvas: HTMLCanvasElement) {}
+
+  async preload() {
+    await loadPhysicsModule();
+  }
+
+  init() {
     // add window hacks
     window.GAME = this;
     window.CHEAT = {
@@ -74,17 +82,16 @@ export default class Game {
         window.GAME?.chunkLoader.updateFromFollower();
       },
       setTime: (hour: number) => window.GAME?.setTime(hour),
+      get bot() {
+        return window.GAME?.moveBot;
+      },
     };
-  }
 
-  async preload() {
-    await loadPhysicsModule();
-  }
-
-  init() {
     this.options = new Options();
 
     this.ui = new UI();
+
+    this.moveBot = new MoveBot(this);
 
     this.camera = new THREE.PerspectiveCamera(
       45,
@@ -517,10 +524,14 @@ export default class Game {
   update(delta: number) {
     if (this.flyControls) {
       this.flyControls.update(delta, this.tick);
+    } else if (this.moveBot.enabled) {
+      this.moveBot.update(delta, this.tick);
     } else {
       this.player?.update(delta, this.tick);
     }
+
     this.vehicle?.update(delta, this.tick);
+
     for (const obj of this.objectGroup.children) {
       // @ts-expect-error TODO better way to iterate objects
       obj.gameObject?.update(delta, this.tick);
@@ -634,6 +645,7 @@ export default class Game {
     this.renderer?.dispose();
     this.controls?.unbindControls();
     this.physics?.dispose();
+    this.moveBot?.dispose();
 
     if (window.GAME === this) window.GAME = null;
 

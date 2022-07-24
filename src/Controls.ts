@@ -135,7 +135,7 @@ export default class Controls {
 
   onMousemove = (evt: MouseEvent) => {
     if (this.game.state === GameState.PLAYING) {
-      const sensitivity = this.game.options!.get('mouseSensitivity') / 3000;
+      const sensitivity = this.game.options.get('mouseSensitivity') / 3000;
 
       const mx = evt.movementX;
       let my = evt.movementY;
