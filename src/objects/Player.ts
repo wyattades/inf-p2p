@@ -29,7 +29,7 @@ function projectOnPlane(vector: Point3, planeNormal: Point3) {
   return _planeNormal.multiplyScalar(-dot).add(vector as THREE.Vector3);
 }
 
-const playerHeight = 6.0;
+export const playerHeight = 6.0;
 const playerWidth = 2.0;
 const jumpSpeed = 40;
 const maxSpeed = 45;
@@ -79,15 +79,7 @@ export default class Player extends physicsMixin(GameObject) {
     return this.body.rigidBody.linvel();
   }
 
-  onGround(groundHeight: number) {
-    // FIXME: for some reason proximity events are not emitted when colliding with terrain
-    // (static bodies) so we need to use the getHeightAt code below
-    // if (this.game.physics.isProximitied(this.floorColliderHandle)) return true;
-
-    return (
-      this.position.y - playerHeight / 2 - floorColliderDist <= groundHeight
-    );
-  }
+  stuckInGroundCounter = 0;
 
   _motion = new THREE.Vector3();
   _motionRotation = new THREE.Matrix4();
@@ -118,7 +110,9 @@ export default class Player extends physicsMixin(GameObject) {
       playerHeight,
     );
 
-    const onGround = this.onGround(groundHeight);
+    const groundDeltaY = this.position.y - playerHeight / 2 - groundHeight;
+
+    const onGround = groundDeltaY <= floorColliderDist;
 
     const linvel = this.body.rigidBody.linvel();
 
@@ -180,11 +174,25 @@ export default class Player extends physicsMixin(GameObject) {
 
     this.body.copyToObj(this, true);
 
+    if (groundDeltaY < -1.0) this.stuckInGroundCounter++;
+    else this.stuckInGroundCounter = 0;
+
     // TODO: figure out the actual minimum height
     if (this.position.y < -100) {
       console.warn('Player fell out of the world!');
 
-      this.setPos(null, Math.max(0, groundHeight) + 10, null);
+      this.setPos(
+        null,
+        Math.max(
+          0,
+          this.game.physics.getMaxHeightAt(this.position.x, this.position.z),
+        ) + 10,
+        null,
+      );
+    } else if (this.stuckInGroundCounter >= 5) {
+      console.warn('Player got stuck in the ground!');
+
+      this.setPos(null, this.position.y + 1, null);
     }
   }
 }

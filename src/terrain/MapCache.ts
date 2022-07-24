@@ -30,7 +30,9 @@ export default class MapCache {
       upgrade: (db, oldVersion, newVersion) => {
         console.log('Upgrading object store:', oldVersion, '->', newVersion);
 
-        db.deleteObjectStore(this.storeName);
+        if (db.objectStoreNames.contains(this.storeName)) {
+          db.deleteObjectStore(this.storeName);
+        }
 
         const store = db.createObjectStore(this.storeName, {
           keyPath: ['x', 'z'],
