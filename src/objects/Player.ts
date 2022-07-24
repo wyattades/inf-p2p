@@ -38,6 +38,9 @@ const nonGroundedMoveForce = moveForce * 0.2;
 const friction = 1.1;
 const restitution = 0.15;
 const floorColliderDist = 1.0;
+const minWorldY = -100; // TODO: figure out the actual minimum height
+const stuckInGroundDelta = -0.5;
+const stuckInGroundIterations = 5;
 
 export default class Player extends physicsMixin(GameObject) {
   object = new THREE.Object3D();
@@ -84,6 +87,8 @@ export default class Player extends physicsMixin(GameObject) {
   _motion = new THREE.Vector3();
   _motionRotation = new THREE.Matrix4();
   lastJumpAt = -9999;
+  lastJumpY: number | null = null;
+
   update(_delta: number, tick: number) {
     const { x: rotAngleX, y: rotAngleY } = this.game.controls.rotation;
 
@@ -118,6 +123,15 @@ export default class Player extends physicsMixin(GameObject) {
 
     let updateVel = null;
 
+    // the last jump failed if player `y` didn't change since last jump
+    // (wait for 2 iterations b/c sometimes `y` doesn't change after 1 iteration)
+    const lastJumpFailed =
+      tick - this.lastJumpAt === 2 &&
+      this.lastJumpY != null &&
+      this.lastJumpY === this.position.y;
+
+    if (tick - this.lastJumpAt >= 2) this.lastJumpY = null;
+
     if (
       keystate.jump &&
       tick - this.lastJumpAt > 30 && // ~0.5 seconds
@@ -125,6 +139,7 @@ export default class Player extends physicsMixin(GameObject) {
     ) {
       updateVel = { ...linvel, y: jumpSpeed };
       this.lastJumpAt = tick;
+      this.lastJumpY = this.position.y;
     }
 
     const applyingMotion = motion.lengthSq() > 0;
@@ -174,11 +189,10 @@ export default class Player extends physicsMixin(GameObject) {
 
     this.body.copyToObj(this, true);
 
-    if (groundDeltaY < -1.0) this.stuckInGroundCounter++;
+    if (groundDeltaY < stuckInGroundDelta) this.stuckInGroundCounter++;
     else this.stuckInGroundCounter = 0;
 
-    // TODO: figure out the actual minimum height
-    if (this.position.y < -100) {
+    if (this.position.y < minWorldY) {
       console.warn('Player fell out of the world!');
 
       this.setPos(
@@ -189,10 +203,14 @@ export default class Player extends physicsMixin(GameObject) {
         ) + 10,
         null,
       );
-    } else if (this.stuckInGroundCounter >= 5) {
+    } else if (this.stuckInGroundCounter >= stuckInGroundIterations) {
+      this.stuckInGroundCounter = 0;
       console.warn('Player got stuck in the ground!');
-
       this.setPos(null, this.position.y + 1, null);
+    } else if (lastJumpFailed) {
+      console.warn('Last player jump failed!');
+      this.setPos(null, this.position.y + 1, null);
+      this.body.rigidBody.setLinvel(new RAPIER.Vector3(0, jumpSpeed, 0), true);
     }
   }
 }
